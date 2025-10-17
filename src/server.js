@@ -3,7 +3,7 @@ const path = require('path');
 require('./env');
 const { insertCliente, ping } = require('./db');
 const { findClienteByTelefono, updateCliente } = require('./db');
-const { sanitizeClienteInput, validateCliente } = require('./types');
+const { sanitizeClienteInput, validateCliente, sanitizePedidoInput, validatePedido } = require('./types');
 
 
 const app = express();
@@ -24,6 +24,17 @@ app.get('/db-health', async (req, res) => {
   } catch (e) {
     console.error('DB health error:', e);
     res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Catálogos
+app.get('/api/catalogos/raza-tamano', async (req, res) => {
+  try {
+    const data = await require('./db').getRazasTamano();
+    res.json({ ok: true, data });
+  } catch (e) {
+    console.error('Catálogo raza-tamano error:', e);
+    res.status(500).json({ ok: false, errors: ['No se pudo cargar catálogo'] });
   }
 });
 
@@ -87,6 +98,47 @@ app.put('/api/clientes/:id', async (req, res) => {
     if (err && err.code === '23505') {
       return res.status(409).json({ ok: false, errors: ['telefono_propietario ya existe'] });
     }
+    res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
+  }
+});
+
+// -------- Pedidos --------
+app.get('/api/pedidos', async (req, res) => {
+  try {
+    const tel = String(req.query.telefono || '').trim();
+    if (!tel) return res.status(400).json({ ok: false, errors: ['telefono es requerido'] });
+    const rows = await require('./db').findPedidosHoyPorTelefono(tel);
+    res.json({ ok: true, data: rows });
+  } catch (e) {
+    console.error('Get pedidos error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
+  }
+});
+
+app.post('/api/pedidos', async (req, res) => {
+  try {
+    const sanitized = sanitizePedidoInput(req.body);
+    const errors = validatePedido(sanitized);
+    if (errors.length > 0) return res.status(400).json({ ok: false, errors });
+    const created = await require('./db').insertPedido(sanitized);
+    res.status(201).json({ ok: true, id: created.id });
+  } catch (e) {
+    console.error('Insert pedido error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
+  }
+});
+
+app.put('/api/pedidos/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
+    const sanitized = sanitizePedidoInput(req.body);
+    const errors = validatePedido(sanitized);
+    if (errors.length > 0) return res.status(400).json({ ok: false, errors });
+    const updated = await require('./db').updatePedido(id, sanitized);
+    res.json({ ok: true, id: updated.id });
+  } catch (e) {
+    console.error('Update pedido error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
   }
 });

@@ -10,4 +10,7 @@ button { cursor: pointer; }
 .errors { color: #b00020; }
 .success { color: #0a7a29; margin-top: 12px; }
 .highlight-required { background: rgba(255, 215, 0, 0.25); }
+.money { font-variant-numeric: tabular-nums; }
+.money.negative { color: #b00020; }
+.money.positive { color: #0a7a29; }
 

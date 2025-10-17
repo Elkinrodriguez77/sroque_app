@@ -89,6 +89,14 @@ async function buscarCliente() {
 btnBuscar.addEventListener('click', buscarCliente);
 
 btnPedido.addEventListener('click', () => {
+  const c = window._clienteEncontrado || {};
+  try {
+    const prefill = {
+      telefono_propietario: c.telefono_propietario || document.getElementById('buscarTelefono').value || '',
+      telefono_acudiente: c.telefono_acudiente || ''
+    };
+    localStorage.setItem('pedido_prefill', JSON.stringify(prefill));
+  } catch {}
   window.location.href = '/pedido.html';
 });
 

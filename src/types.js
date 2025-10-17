@@ -61,4 +61,40 @@ module.exports = {
   validateCliente,
 };
 
+// -------- Pedidos --------
+function toNumberOrZero(value) {
+  if (value === '' || value === undefined || value === null) return 0;
+  const n = Number(value);
+  return isNaN(n) ? 0 : n;
+}
+
+function sanitizePedidoInput(input) {
+  const { DateTime } = require('luxon');
+  const nowBogota = DateTime.now().setZone('America/Bogota');
+  return {
+    telefono_propietario: input.telefono_propietario ? String(input.telefono_propietario).trim() : '',
+    telefono_acudiente: input.telefono_acudiente ? String(input.telefono_acudiente).trim() : undefined,
+    fecha_hora: input.fecha_hora ? new Date(input.fecha_hora).toISOString() : nowBogota.toISO(),
+    raza: input.raza ? String(input.raza).trim() : undefined,
+    tamano: input.tamano ? String(input.tamano).trim() : undefined,
+    pelaje: input.pelaje ? String(input.pelaje).trim() : undefined,
+    servicio: input.servicio ? String(input.servicio).trim() : '',
+    precio: toNumberOrZero(input.precio),
+    adicionales_descuentos: toNumberOrZero(input.adicionales_descuentos),
+    metodo_pago: input.metodo_pago ? String(input.metodo_pago).trim() : undefined,
+    groomer1: input.groomer1 ? String(input.groomer1).trim() : undefined,
+    groomer2: input.groomer2 ? String(input.groomer2).trim() : undefined,
+  };
+}
+
+function validatePedido(pedido) {
+  const errors = [];
+  if (!pedido.telefono_propietario) errors.push('telefono_propietario es requerido');
+  if (!pedido.servicio) errors.push('servicio es requerido');
+  return errors;
+}
+
+module.exports.sanitizePedidoInput = sanitizePedidoInput;
+module.exports.validatePedido = validatePedido;
+
 

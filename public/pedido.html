@@ -8,10 +8,103 @@
   </head>
   <body>
     <main class="container">
-      <h1>Registrar pedido / servicio</h1>
-      <p>Esta página se implementará más adelante.</p>
-      <button onclick="history.back()">Volver atrás</button>
+      <h1>Pedidos del día</h1>
+
+      <section>
+        <fieldset>
+          <legend>Buscar pedidos por teléfono (propietario o acudiente)</legend>
+          <input id="filtroTelefono" type="tel" maxlength="20" placeholder="Teléfono" />
+          <button id="btnBuscarPedidos" type="button">Buscar</button>
+          <div id="pedidosMsg" class="errors" aria-live="polite"></div>
+          <ul id="listaPedidos"></ul>
+        </fieldset>
+      </section>
+
+      <form id="pedidoForm">
+        <input type="hidden" name="id" />
+        <fieldset>
+          <legend>Datos del contacto</legend>
+          <label>Teléfono propietario
+            <input name="telefono_propietario" type="tel" maxlength="20" required />
+          </label>
+          <label>Teléfono acudiente
+            <input name="telefono_acudiente" type="tel" maxlength="20" />
+          </label>
+          <label>Fecha y hora
+            <input name="fecha_hora" type="datetime-local" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Datos de la mascota y servicio</legend>
+          <label>Raza (busca y selecciona)
+            <input list="razas" name="raza" id="razaSelect" placeholder="Escribe para buscar..." />
+            <datalist id="razas"></datalist>
+          </label>
+          
+          <label>Tamaño
+            <select name="tamano" id="tamanoSelect">
+              <option value="">Seleccione...</option>
+              <option>Grande</option>
+              <option>Mediano</option>
+              <option>Pequeño</option>
+            </select>
+          </label>
+          <label>Pelaje
+            <select name="pelaje" id="pelajeSelect">
+              <option value="">Seleccione...</option>
+              <option>Corto</option>
+              <option>Medio</option>
+              <option>Largo</option>
+            </select>
+          </label>
+          <label>Servicio (busca y selecciona)
+            <input list="servicios" name="servicio" id="servicioSelect" placeholder="Escribe para buscar..." />
+            <datalist id="servicios"></datalist>
+          </label>
+          <label id="servicioOtroWrapper" hidden>Otro servicio
+            <input name="servicio_otro" type="text" maxlength="80" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Precios y pago</legend>
+          <label>Precio base
+            <input name="precio" type="number" step="0.01" min="0" value="0" />
+            <div class="money" id="precioFmt"></div>
+          </label>
+          <label>Adicionales / Descuentos
+            <input name="adicionales_descuentos" type="number" step="0.01" value="0" />
+            <div class="money" id="adicionalesFmt"></div>
+          </label>
+          <label>Método de pago (busca y selecciona)
+            <input list="metodosPago" name="metodo_pago" id="metodoPagoSelect" placeholder="Escribe para buscar..." />
+            <datalist id="metodosPago"></datalist>
+          </label>
+          <div class="hint">El precio final se calcula automáticamente en el backend.</div>
+          <div>
+            <strong>Total estimado: </strong>
+            <span id="precioFinal" class="money">$0</span>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Groomers</legend>
+          <label>Groomer 1 (busca y selecciona)
+            <input list="groomers" name="groomer1" id="groomer1Select" placeholder="Escribe para buscar..." />
+          </label>
+          <label>Groomer 2 (opcional)
+            <input list="groomers" name="groomer2" id="groomer2Select" placeholder="Escribe para buscar..." />
+          </label>
+          <datalist id="groomers"></datalist>
+        </fieldset>
+
+        <div id="pedidoErrors" class="errors" aria-live="polite"></div>
+        <button type="submit">Guardar pedido</button>
+        <button type="button" onclick="history.back()">Volver atrás</button>
+      </form>
     </main>
+    <script src="/pedido.js" defer></script>
   </body>
   </html>
 
