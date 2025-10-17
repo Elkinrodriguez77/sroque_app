@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Registro de Clientes - San Roque</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Registro de Clientes</h1>
+      <section id="searchSection">
+        <fieldset>
+          <legend>Buscar cliente por teléfono</legend>
+          <label>Teléfono propietario
+            <input id="buscarTelefono" type="tel" maxlength="20" />
+          </label>
+          <button id="btnBuscar" type="button">Buscar</button>
+          <div id="lookupMsg" class="errors" aria-live="polite"></div>
+          <div id="lookupOptions" hidden>
+            <p>Cliente encontrado.</p>
+            <button id="btnPedido" type="button">Registrar pedido / servicio</button>
+            <button id="btnActualizar" type="button">Actualizar datos</button>
+          </div>
+        </fieldset>
+      </section>
+      <form id="clienteForm" hidden>
+        <input type="hidden" name="id" />
+        <fieldset>
+          <legend>Datos obligatorios</legend>
+          <label>
+            ¿Es propietario?
+            <select name="es_propietario" required>
+              <option value="">Seleccione...</option>
+              <option value="true">Sí</option>
+              <option value="false">No</option>
+            </select>
+          </label>
+          <label>
+            Teléfono propietario
+            <input name="telefono_propietario" type="tel" maxlength="20" required />
+          </label>
+          <label id="acudienteWrapper">
+            Teléfono acudiente
+            <input name="telefono_acudiente" type="tel" maxlength="20" />
+          </label>
+          <label>
+            Autorización tratamiento de datos
+            <select name="autorizacion_tratamiento_datos" required>
+              <option value="">Seleccione...</option>
+              <option value="true">Autorizo</option>
+              <option value="false">No autorizo</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Datos SanRoquero</legend>
+          <label>Nombre de la mascota
+            <input name="nombre_mascota" type="text" maxlength="200" />
+          </label>
+          <label>Email
+            <input name="email" type="email" maxlength="255" />
+          </label>
+          <label>Perfil Instagram
+            <input name="perfil_instagram" type="text" maxlength="50" />
+          </label>
+          <label>Dirección
+            <input name="direccion" type="text" maxlength="100" />
+          </label>
+          <label>Alimento de la mascota
+            <input name="alimento_mascota" type="text" maxlength="50" />
+          </label>
+          <label>Fecha nacimiento
+            <input name="fecha_nacimiento" type="date" />
+          </label>
+          <label>Fecha antipulgas
+            <input name="fecha_antipulgas" type="date" />
+          </label>
+          <label>Producto antipulgas
+            <input name="producto_antipulgas" type="text" maxlength="50" />
+          </label>
+          <label>Fecha antiparasitario
+            <input name="fecha_antiparasitario" type="date" />
+          </label>
+          <label>Producto antiparasitario
+            <input name="producto_antiparasitario" type="text" maxlength="50" />
+          </label>
+          <label>¿Alergias?
+            <select name="alergias">
+              <option value="">No especifica</option>
+              <option value="true">Sí</option>
+              <option value="false">No</option>
+            </select>
+          </label>
+          <label>Observaciones
+            <textarea name="observaciones" maxlength="500"></textarea>
+          </label>
+        </fieldset>
+
+        <div id="formErrors" class="errors" aria-live="polite"></div>
+
+        <button type="submit">Guardar</button>
+      </form>
+      <div id="success" class="success" hidden>¡Cliente registrado correctamente!</div>
+    </main>
+
+    <script src="/main.js" defer></script>
+  </body>
+  </html>
+
+
