@@ -13,4 +13,6 @@ button { cursor: pointer; }
 .money { font-variant-numeric: tabular-nums; }
 .money.negative { color: #b00020; }
 .money.positive { color: #0a7a29; }
+.mascota-card { border: 1px solid #ddd; border-radius: 8px; padding: 8px 10px; margin: 8px 0; background: rgba(0,0,0,0.02); }
+.mascota-card-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
 

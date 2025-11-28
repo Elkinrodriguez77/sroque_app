@@ -32,39 +32,25 @@ async function insertCliente(cliente) {
       es_propietario,
       telefono_propietario,
       telefono_acudiente,
+      nombre_propietario,
+      nombre_acudiente,
       email,
       perfil_instagram,
       direccion,
-      alimento_mascota,
-      nombre_mascota,
-      fecha_nacimiento,
-      fecha_antipulgas,
-      producto_antipulgas,
-      fecha_antiparasitario,
-      producto_antiparasitario,
-      alergias,
-      observaciones,
       autorizacion_tratamiento_datos
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16
+      $1,$2,$3,$4,$5,$6,$7,$8,$9
     ) RETURNING id;
   `;
   const values = [
     cliente.es_propietario,
     cliente.telefono_propietario,
     cliente.telefono_acudiente || null,
+    cliente.nombre_propietario,
+    cliente.nombre_acudiente || null,
     cliente.email || null,
     cliente.perfil_instagram || null,
     cliente.direccion || null,
-    cliente.alimento_mascota || null,
-    cliente.nombre_mascota || null,
-    cliente.fecha_nacimiento || null,
-    cliente.fecha_antipulgas || null,
-    cliente.producto_antipulgas || null,
-    cliente.fecha_antiparasitario || null,
-    cliente.producto_antiparasitario || null,
-    cliente.alergias,
-    cliente.observaciones || null,
     cliente.autorizacion_tratamiento_datos,
   ];
   const { rows } = await pool.query(text, values);
@@ -75,10 +61,15 @@ async function findClienteByTelefono(telefono) {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
   const { rows } = await pool.query(
     `SELECT 
-      id, es_propietario, telefono_propietario, telefono_acudiente, email,
-      perfil_instagram, direccion, alimento_mascota, nombre_mascota,
-      fecha_nacimiento, fecha_antipulgas, producto_antipulgas,
-      fecha_antiparasitario, producto_antiparasitario, alergias, observaciones,
+      id,
+      es_propietario,
+      telefono_propietario,
+      telefono_acudiente,
+      nombre_propietario,
+      nombre_acudiente,
+      email,
+      perfil_instagram,
+      direccion,
       autorizacion_tratamiento_datos
      FROM ${schema}.clientes WHERE telefono_propietario = $1 LIMIT 1`,
     [telefono]
@@ -93,38 +84,24 @@ async function updateCliente(id, cliente) {
       es_propietario = $1,
       telefono_propietario = $2,
       telefono_acudiente = $3,
-      email = $4,
-      perfil_instagram = $5,
-      direccion = $6,
-      alimento_mascota = $7,
-      nombre_mascota = $8,
-      fecha_nacimiento = $9,
-      fecha_antipulgas = $10,
-      producto_antipulgas = $11,
-      fecha_antiparasitario = $12,
-      producto_antiparasitario = $13,
-      alergias = $14,
-      observaciones = $15,
-      autorizacion_tratamiento_datos = $16
-    WHERE id = $17
+      nombre_propietario = $4,
+      nombre_acudiente = $5,
+      email = $6,
+      perfil_instagram = $7,
+      direccion = $8,
+      autorizacion_tratamiento_datos = $9
+    WHERE id = $10
     RETURNING id;
   `;
   const values = [
     cliente.es_propietario,
     cliente.telefono_propietario,
     cliente.telefono_acudiente || null,
+    cliente.nombre_propietario,
+    cliente.nombre_acudiente || null,
     cliente.email || null,
     cliente.perfil_instagram || null,
     cliente.direccion || null,
-    cliente.alimento_mascota || null,
-    cliente.nombre_mascota || null,
-    cliente.fecha_nacimiento || null,
-    cliente.fecha_antipulgas || null,
-    cliente.producto_antipulgas || null,
-    cliente.fecha_antiparasitario || null,
-    cliente.producto_antiparasitario || null,
-    cliente.alergias,
-    cliente.observaciones || null,
     cliente.autorizacion_tratamiento_datos,
     id,
   ];
@@ -238,6 +215,80 @@ async function getRazasTamano() {
   return { razas, mapping };
 }
 
+// ----- Mascotas por cliente -----
+async function getMascotasByTelefono(telefono) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `SELECT
+       id,
+       telefono_propietario,
+       nombre_mascota,
+       alimento_mascota,
+       fecha_nacimiento,
+       fecha_antipulgas,
+       producto_antipulgas,
+       fecha_antiparasitario,
+       producto_antiparasitario,
+       alergias,
+       observaciones
+     FROM ${schema}.mascotas
+     WHERE telefono_propietario = $1
+     ORDER BY id`,
+    [telefono]
+  );
+  return rows;
+}
+
+async function replaceMascotasForTelefono(telefono, mascotas) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `DELETE FROM ${schema}.mascotas WHERE telefono_propietario = $1`,
+      [telefono]
+    );
+    if (Array.isArray(mascotas)) {
+      for (const m of mascotas) {
+        const nombre = m && m.nombre_mascota ? String(m.nombre_mascota).trim() : '';
+        if (!nombre) continue; // ignorar mascotas sin nombre
+        await client.query(
+          `INSERT INTO ${schema}.mascotas (
+             telefono_propietario,
+             nombre_mascota,
+             alimento_mascota,
+             fecha_nacimiento,
+             fecha_antipulgas,
+             producto_antipulgas,
+             fecha_antiparasitario,
+             producto_antiparasitario,
+             alergias,
+             observaciones
+           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [
+            telefono,
+            nombre,
+            m.alimento_mascota || null,
+            m.fecha_nacimiento || null,
+            m.fecha_antipulgas || null,
+            m.producto_antipulgas || null,
+            m.fecha_antiparasitario || null,
+            m.producto_antiparasitario || null,
+            typeof m.alergias === 'boolean' ? m.alergias : null,
+            m.observaciones || null,
+          ]
+        );
+      }
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   pool,
   ping,
@@ -248,6 +299,8 @@ module.exports = {
   updatePedido,
   findPedidosHoyPorTelefono,
   getRazasTamano,
+  getMascotasByTelefono,
+  replaceMascotasForTelefono,
 };
 
 
