@@ -37,6 +37,14 @@
 
         <fieldset>
           <legend>Datos de la mascota y servicio</legend>
+          <label>Mascota
+            <select id="mascotaSelect" name="mascota_id">
+              <option value="">Nueva mascota / sin seleccionar</option>
+            </select>
+          </label>
+          <label>Nombre de la mascota
+            <input id="nombreMascota" name="nombre_mascota" type="text" maxlength="200" />
+          </label>
           <label>Raza (busca y selecciona)
             <input list="razas" name="raza" id="razaSelect" placeholder="Escribe para buscar..." />
             <datalist id="razas"></datalist>

@@ -125,9 +125,11 @@ async function insertPedido(pedido) {
       adicionales_descuentos,
       metodo_pago,
       groomer1,
-      groomer2
+      groomer2,
+      mascota_id,
+      nombre_mascota
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
     ) RETURNING id;
   `;
   const values = [
@@ -143,6 +145,8 @@ async function insertPedido(pedido) {
     pedido.metodo_pago || null,
     pedido.groomer1 || null,
     pedido.groomer2 || null,
+    pedido.mascota_id || null,
+    pedido.nombre_mascota || null,
   ];
   const { rows } = await pool.query(text, values);
   return rows[0];
@@ -163,8 +167,10 @@ async function updatePedido(id, pedido) {
       adicionales_descuentos = $9,
       metodo_pago = $10,
       groomer1 = $11,
-      groomer2 = $12
-    WHERE id = $13
+      groomer2 = $12,
+      mascota_id = $13,
+      nombre_mascota = $14
+    WHERE id = $15
     RETURNING id;
   `;
   const values = [
@@ -180,6 +186,8 @@ async function updatePedido(id, pedido) {
     pedido.metodo_pago || null,
     pedido.groomer1 || null,
     pedido.groomer2 || null,
+    pedido.mascota_id || null,
+    pedido.nombre_mascota || null,
     id,
   ];
   const { rows } = await pool.query(text, values);
@@ -230,7 +238,10 @@ async function getMascotasByTelefono(telefono) {
        fecha_antiparasitario,
        producto_antiparasitario,
        alergias,
-       observaciones
+       observaciones,
+       raza,
+       tamano,
+       pelaje
      FROM ${schema}.mascotas
      WHERE telefono_propietario = $1
      ORDER BY id`,
@@ -263,8 +274,11 @@ async function replaceMascotasForTelefono(telefono, mascotas) {
              fecha_antiparasitario,
              producto_antiparasitario,
              alergias,
-             observaciones
-           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+             observaciones,
+             raza,
+             tamano,
+             pelaje
+           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
           [
             telefono,
             nombre,
@@ -276,6 +290,9 @@ async function replaceMascotasForTelefono(telefono, mascotas) {
             m.producto_antiparasitario || null,
             typeof m.alergias === 'boolean' ? m.alergias : null,
             m.observaciones || null,
+            m.raza || null,
+            m.tamano || null,
+            m.pelaje || null,
           ]
         );
       }
@@ -287,6 +304,64 @@ async function replaceMascotasForTelefono(telefono, mascotas) {
   } finally {
     client.release();
   }
+}
+
+async function findMascotaByTelefonoAndNombre(telefono, nombre) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `SELECT *
+     FROM ${schema}.mascotas
+     WHERE telefono_propietario = $1 AND nombre_mascota = $2
+     ORDER BY id
+     LIMIT 1`,
+    [telefono, nombre]
+  );
+  return rows[0] || null;
+}
+
+async function upsertMascotaBasica({ telefono_propietario, mascota_id, nombre_mascota, raza, tamano, pelaje }) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  if (!telefono_propietario || !nombre_mascota) return null;
+
+  if (mascota_id) {
+    const { rows } = await pool.query(
+      `UPDATE ${schema}.mascotas
+       SET raza = COALESCE($2, raza),
+           tamano = COALESCE($3, tamano),
+           pelaje = COALESCE($4, pelaje)
+       WHERE id = $1
+       RETURNING *`,
+      [mascota_id, raza || null, tamano || null, pelaje || null]
+    );
+    return rows[0] || null;
+  }
+
+  const existing = await findMascotaByTelefonoAndNombre(telefono_propietario, nombre_mascota);
+  if (existing) {
+    const { rows } = await pool.query(
+      `UPDATE ${schema}.mascotas
+       SET raza = COALESCE($2, raza),
+           tamano = COALESCE($3, tamano),
+           pelaje = COALESCE($4, pelaje)
+       WHERE id = $1
+       RETURNING *`,
+      [existing.id, raza || null, tamano || null, pelaje || null]
+    );
+    return rows[0] || null;
+  }
+
+  const { rows } = await pool.query(
+    `INSERT INTO ${schema}.mascotas (
+       telefono_propietario,
+       nombre_mascota,
+       raza,
+       tamano,
+       pelaje
+     ) VALUES ($1,$2,$3,$4,$5)
+     RETURNING *`,
+    [telefono_propietario, nombre_mascota, raza || null, tamano || null, pelaje || null]
+  );
+  return rows[0];
 }
 
 module.exports = {
@@ -301,6 +376,7 @@ module.exports = {
   getRazasTamano,
   getMascotasByTelefono,
   replaceMascotasForTelefono,
+  upsertMascotaBasica,
 };
 
 

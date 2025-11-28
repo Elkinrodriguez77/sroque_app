@@ -1,5 +1,6 @@
 let RAZAS = [];
 let RAZA_TAMANO = {};
+let MASCOTAS = [];
 
 const SERVICIOS = ['HERBAL PET SPA','ROCKSTAR','SANROQUERO','SHANTI PET SPA','SUPERSTAR','OTRO'];
 const METODOS_PAGO = ['Billetera digital','Cortesía','Efectivo','Garantía','Promoción','Tarjeta crédito','Tarjeta débito','Transferencia'];
@@ -107,6 +108,8 @@ function cargarPedidoEnFormulario(p) {
   form.elements['telefono_propietario'].value = p.telefono_propietario || '';
   form.elements['telefono_acudiente'].value = p.telefono_acudiente || '';
   form.elements['fecha_hora'].value = p.fecha_hora ? new Date(p.fecha_hora).toISOString().slice(0,16) : '';
+  form.elements['mascota_id'].value = p.mascota_id || '';
+  document.getElementById('nombreMascota').value = p.nombre_mascota || '';
   form.elements['raza'].value = p.raza || '';
   document.getElementById('tamanoSelect').value = p.tamano || '';
   document.getElementById('pelajeSelect').value = p.pelaje || '';
@@ -122,6 +125,44 @@ function prefillPhones() {
     if (pre.telefono_propietario) document.querySelector('#pedidoForm [name="telefono_propietario"]').value = pre.telefono_propietario;
     if (pre.telefono_acudiente) document.querySelector('#pedidoForm [name="telefono_acudiente"]').value = pre.telefono_acudiente;
   } catch {}
+}
+
+async function cargarMascotasPorTelefono() {
+  const tel = document.querySelector('#pedidoForm [name="telefono_propietario"]').value.trim();
+  const sel = document.getElementById('mascotaSelect');
+  sel.innerHTML = '<option value=\"\">Nueva mascota / sin seleccionar</option>';
+  MASCOTAS = [];
+  if (!tel) return;
+  try {
+    const resp = await fetch(`/api/mascotas?telefono=${encodeURIComponent(tel)}`);
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok || !body.ok) return;
+    MASCOTAS = body.data || [];
+    for (const m of MASCOTAS) {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.nombre_mascota || `Mascota ${m.id}`;
+      sel.appendChild(opt);
+    }
+  } catch (e) {
+    // silencioso
+  }
+}
+
+function onMascotaChange() {
+  const sel = document.getElementById('mascotaSelect');
+  const id = sel.value;
+  const nombreInput = document.getElementById('nombreMascota');
+  if (!id) {
+    // nueva mascota: no tocar raza/tamaño/pelaje
+    return;
+  }
+  const m = MASCOTAS.find((x) => String(x.id) === String(id));
+  if (!m) return;
+  nombreInput.value = m.nombre_mascota || '';
+  document.getElementById('razaSelect').value = m.raza || '';
+  document.getElementById('tamanoSelect').value = m.tamano || '';
+  document.getElementById('pelajeSelect').value = m.pelaje || '';
 }
 
 function updateMoney() {
@@ -160,10 +201,14 @@ function init() {
   document.getElementById('btnBuscarPedidos').addEventListener('click', buscarPedidos);
   document.getElementById('pedidoForm').elements['precio'].addEventListener('input', updateMoney);
   document.getElementById('pedidoForm').elements['adicionales_descuentos'].addEventListener('input', updateMoney);
+  document.getElementById('pedidoForm').elements['telefono_propietario'].addEventListener('change', cargarMascotasPorTelefono);
+  document.getElementById('mascotaSelect').addEventListener('change', onMascotaChange);
   prefillPhones();
   // Prefill filtro con teléfono propietario si existe
   const pre = JSON.parse(localStorage.getItem('pedido_prefill') || '{}');
   if (pre.telefono_propietario) document.getElementById('filtroTelefono').value = pre.telefono_propietario;
+  // cargar mascotas iniciales si hay teléfono prefijado
+  cargarMascotasPorTelefono();
   updateMoney();
 }
 

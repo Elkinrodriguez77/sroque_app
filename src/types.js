@@ -74,6 +74,8 @@ function sanitizePedidoInput(input) {
     tamano: input.tamano ? String(input.tamano).trim() : undefined,
     pelaje: input.pelaje ? String(input.pelaje).trim() : undefined,
     servicio: input.servicio ? String(input.servicio).trim() : '',
+    mascota_id: input.mascota_id ? Number(input.mascota_id) || null : null,
+    nombre_mascota: input.nombre_mascota ? String(input.nombre_mascota).trim() : undefined,
     precio: toNumberOrZero(input.precio),
     adicionales_descuentos: toNumberOrZero(input.adicionales_descuentos),
     metodo_pago: input.metodo_pago ? String(input.metodo_pago).trim() : undefined,

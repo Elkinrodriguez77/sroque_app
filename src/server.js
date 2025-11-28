@@ -12,6 +12,7 @@ const {
   updatePedido,
   getMascotasByTelefono,
   replaceMascotasForTelefono,
+  upsertMascotaBasica,
 } = require('./db');
 const { sanitizeClienteInput, validateCliente, sanitizePedidoInput, validatePedido } = require('./types');
 
@@ -139,6 +140,24 @@ app.post('/api/pedidos', async (req, res) => {
     const sanitized = sanitizePedidoInput(req.body);
     const errors = validatePedido(sanitized);
     if (errors.length > 0) return res.status(400).json({ ok: false, errors });
+    // Asegurar mascota en tabla mascotas
+    if (sanitized.telefono_propietario && sanitized.nombre_mascota) {
+      const m = await upsertMascotaBasica({
+        telefono_propietario: sanitized.telefono_propietario,
+        mascota_id: sanitized.mascota_id,
+        nombre_mascota: sanitized.nombre_mascota,
+        raza: sanitized.raza,
+        tamano: sanitized.tamano,
+        pelaje: sanitized.pelaje,
+      });
+      if (m) {
+        sanitized.mascota_id = m.id;
+        sanitized.nombre_mascota = m.nombre_mascota;
+        sanitized.raza = sanitized.raza || m.raza;
+        sanitized.tamano = sanitized.tamano || m.tamano;
+        sanitized.pelaje = sanitized.pelaje || m.pelaje;
+      }
+    }
     const created = await insertPedido(sanitized);
     res.status(201).json({ ok: true, id: created.id });
   } catch (e) {
@@ -154,10 +173,40 @@ app.put('/api/pedidos/:id', async (req, res) => {
     const sanitized = sanitizePedidoInput(req.body);
     const errors = validatePedido(sanitized);
     if (errors.length > 0) return res.status(400).json({ ok: false, errors });
+    if (sanitized.telefono_propietario && sanitized.nombre_mascota) {
+      const m = await upsertMascotaBasica({
+        telefono_propietario: sanitized.telefono_propietario,
+        mascota_id: sanitized.mascota_id,
+        nombre_mascota: sanitized.nombre_mascota,
+        raza: sanitized.raza,
+        tamano: sanitized.tamano,
+        pelaje: sanitized.pelaje,
+      });
+      if (m) {
+        sanitized.mascota_id = m.id;
+        sanitized.nombre_mascota = m.nombre_mascota;
+        sanitized.raza = sanitized.raza || m.raza;
+        sanitized.tamano = sanitized.tamano || m.tamano;
+        sanitized.pelaje = sanitized.pelaje || m.pelaje;
+      }
+    }
     const updated = await updatePedido(id, sanitized);
     res.json({ ok: true, id: updated.id });
   } catch (e) {
     console.error('Update pedido error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
+  }
+});
+
+// Mascotas para pedidos
+app.get('/api/mascotas', async (req, res) => {
+  try {
+    const tel = String(req.query.telefono || '').trim();
+    if (!tel) return res.status(400).json({ ok: false, errors: ['telefono es requerido'] });
+    const mascotas = await getMascotasByTelefono(tel);
+    res.json({ ok: true, data: mascotas });
+  } catch (e) {
+    console.error('Get mascotas error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
   }
 });
