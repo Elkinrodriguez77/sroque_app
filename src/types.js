@@ -66,10 +66,17 @@ function toNumberOrZero(value) {
 function sanitizePedidoInput(input) {
   const { DateTime } = require('luxon');
   const nowBogota = DateTime.now().setZone('America/Bogota');
+  let fechaISO = nowBogota.toISO();
+  if (input.fecha_hora) {
+    const d = new Date(input.fecha_hora);
+    if (!isNaN(d.getTime()) && d.getTime() <= nowBogota.toJSDate().getTime()) {
+      fechaISO = d.toISOString();
+    }
+  }
   return {
     telefono_propietario: input.telefono_propietario ? String(input.telefono_propietario).trim() : '',
     telefono_acudiente: input.telefono_acudiente ? String(input.telefono_acudiente).trim() : undefined,
-    fecha_hora: input.fecha_hora ? new Date(input.fecha_hora).toISOString() : nowBogota.toISO(),
+    fecha_hora: fechaISO,
     raza: input.raza ? String(input.raza).trim() : undefined,
     tamano: input.tamano ? String(input.tamano).trim() : undefined,
     pelaje: input.pelaje ? String(input.pelaje).trim() : undefined,

@@ -15,4 +15,10 @@ button { cursor: pointer; }
 .money.positive { color: #0a7a29; }
 .mascota-card { border: 1px solid #ddd; border-radius: 8px; padding: 8px 10px; margin: 8px 0; background: rgba(0,0,0,0.02); }
 .mascota-card-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+.pedido-item { list-style: none; border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; margin: 6px 0; background: rgba(0,0,0,0.02); display: grid; gap: 4px; }
+.pedido-item-header { display: flex; justify-content: space-between; align-items: center; font-weight: 500; }
+.pedido-meta { font-size: 0.9rem; opacity: 0.9; }
+.pedido-actions { display: flex; gap: 6px; }
+.pedido-item.selected { border-color: #0a7a29; background: rgba(10,122,41,0.05); }
+.badge { padding: 2px 6px; border-radius: 999px; background: rgba(0,0,0,0.08); font-size: 0.8rem; }
 

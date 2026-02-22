@@ -198,12 +198,25 @@ async function findPedidosHoyPorTelefono(telefono) {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
   const { rows } = await pool.query(
     `SELECT * FROM ${schema}.pedidos
-     WHERE fecha_hora::date = CURRENT_DATE
+     WHERE (fecha_hora AT TIME ZONE 'America/Bogota')::date = (NOW() AT TIME ZONE 'America/Bogota')::date
+       AND COALESCE(cerrado, false) = false
        AND ($1 = telefono_propietario OR $1 = telefono_acudiente)
      ORDER BY fecha_hora DESC`,
     [telefono]
   );
   return rows;
+}
+
+async function cerrarPedido(id) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `UPDATE ${schema}.pedidos
+     SET cerrado = true
+     WHERE id = $1
+     RETURNING id`,
+    [id]
+  );
+  return rows[0] || null;
 }
 
 async function getRazasTamano() {
@@ -377,6 +390,7 @@ module.exports = {
   getMascotasByTelefono,
   replaceMascotasForTelefono,
   upsertMascotaBasica,
+  cerrarPedido,
 };
 
 

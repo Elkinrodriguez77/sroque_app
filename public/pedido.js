@@ -49,6 +49,16 @@ async function submitPedido(event) {
   const errorsEl = document.getElementById('pedidoErrors');
   errorsEl.textContent = '';
 
+  // Validar que fecha_hora no sea en el futuro (según hora local del navegador)
+  if (data.fecha_hora) {
+    const ahora = new Date();
+    const elegida = new Date(data.fecha_hora);
+    if (!isNaN(elegida.getTime()) && elegida.getTime() > ahora.getTime()) {
+      errorsEl.textContent = 'La fecha y hora del servicio no puede ser posterior al momento actual.';
+      return;
+    }
+  }
+
   // Si servicio = OTRO usar servicio_otro
   if (data.servicio === 'OTRO' && data.servicio_otro) {
     data.servicio = data.servicio_otro;
@@ -91,12 +101,49 @@ async function buscarPedidos() {
     const resp = await fetch(`/api/pedidos?telefono=${encodeURIComponent(tel)}`);
     const body = await resp.json().catch(() => ({}));
     if (!resp.ok || !body.ok) { msg.textContent = 'Error al buscar'; return; }
-    for (const p of body.data) {
+    const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+    body.data.forEach((p) => {
       const li = document.createElement('li');
-      li.textContent = `${new Date(p.fecha_hora).toLocaleString()} - ${p.servicio} - ${p.telefono_propietario}`;
-      li.addEventListener('click', () => cargarPedidoEnFormulario(p));
+      li.className = 'pedido-item';
+
+      const header = document.createElement('div');
+      header.className = 'pedido-item-header';
+      const hora = p.fecha_hora ? new Date(p.fecha_hora).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '';
+      const left = document.createElement('span');
+      left.textContent = `${hora} · ${p.servicio}`;
+      const right = document.createElement('span');
+      right.className = 'badge';
+      right.textContent = p.nombre_mascota || 'Sin nombre';
+      header.appendChild(left);
+      header.appendChild(right);
+
+      const meta = document.createElement('div');
+      meta.className = 'pedido-meta';
+      const total = (Number(p.precio || 0) + Number(p.adicionales_descuentos || 0));
+      meta.textContent = `${fmt.format(total)} · Tel: ${p.telefono_propietario}`;
+
+      const actions = document.createElement('div');
+      actions.className = 'pedido-actions';
+      const btnEdit = document.createElement('button');
+      btnEdit.type = 'button';
+      btnEdit.textContent = 'Editar';
+      btnEdit.onclick = () => {
+        cargarPedidoEnFormulario(p);
+        document.querySelectorAll('.pedido-item.selected').forEach((n) => n.classList.remove('selected'));
+        li.classList.add('selected');
+      };
+      const btnClose = document.createElement('button');
+      btnClose.type = 'button';
+      btnClose.textContent = 'Cerrar';
+      btnClose.onclick = () => cerrarPedido(p.id);
+      actions.appendChild(btnEdit);
+      actions.appendChild(btnClose);
+
+      li.appendChild(header);
+      li.appendChild(meta);
+      li.appendChild(actions);
       ul.appendChild(li);
-    }
+    });
   } catch (e) {
     msg.textContent = 'Error de red al buscar';
   }
@@ -115,8 +162,12 @@ function cargarPedidoEnFormulario(p) {
   document.getElementById('pelajeSelect').value = p.pelaje || '';
   document.getElementById('servicioSelect').value = p.servicio || '';
   document.getElementById('metodoPagoSelect').value = p.metodo_pago || '';
+  // precios y pagos
+  form.elements['precio'].value = (p.precio != null) ? p.precio : 0;
+  form.elements['adicionales_descuentos'].value = (p.adicionales_descuentos != null) ? p.adicionales_descuentos : 0;
   document.getElementById('groomer1Select').value = p.groomer1 || '';
   document.getElementById('groomer2Select').value = p.groomer2 || '';
+  updateMoney();
 }
 
 function prefillPhones() {
@@ -163,6 +214,30 @@ function onMascotaChange() {
   document.getElementById('razaSelect').value = m.raza || '';
   document.getElementById('tamanoSelect').value = m.tamano || '';
   document.getElementById('pelajeSelect').value = m.pelaje || '';
+}
+
+async function cerrarPedido(id) {
+  const msg = document.getElementById('pedidosMsg');
+  msg.textContent = '';
+  const ok = window.confirm('¿Seguro que deseas cerrar este pedido? Ya no se podrá editar.');
+  if (!ok) return;
+  try {
+    const resp = await fetch(`/api/pedidos/${id}/cerrar`, { method: 'POST' });
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok || !body.ok) {
+      msg.textContent = (body && body.errors && body.errors.join(', ')) || 'No se pudo cerrar el pedido';
+      return;
+    }
+    // refrescar lista y limpiar formulario
+    await buscarPedidos();
+    const form = document.getElementById('pedidoForm');
+    form.reset();
+    prefillPhones();
+    updateMoney();
+    document.querySelectorAll('.pedido-item.selected').forEach((n) => n.classList.remove('selected'));
+  } catch (e) {
+    msg.textContent = 'Error de red al cerrar pedido';
+  }
 }
 
 function updateMoney() {

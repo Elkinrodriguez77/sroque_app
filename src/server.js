@@ -13,6 +13,7 @@ const {
   getMascotasByTelefono,
   replaceMascotasForTelefono,
   upsertMascotaBasica,
+  cerrarPedido,
 } = require('./db');
 const { sanitizeClienteInput, validateCliente, sanitizePedidoInput, validatePedido } = require('./types');
 
@@ -207,6 +208,20 @@ app.get('/api/mascotas', async (req, res) => {
     res.json({ ok: true, data: mascotas });
   } catch (e) {
     console.error('Get mascotas error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
+  }
+});
+
+// Cerrar pedido
+app.post('/api/pedidos/:id/cerrar', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
+    const updated = await cerrarPedido(id);
+    if (!updated) return res.status(404).json({ ok: false, errors: ['pedido no encontrado'] });
+    res.json({ ok: true, id: updated.id });
+  } catch (e) {
+    console.error('Cerrar pedido error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
   }
 });
