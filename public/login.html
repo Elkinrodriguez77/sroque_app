@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Iniciar sesión - San Roque</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/login.css" />
+</head>
+<body>
+  <!-- Siluetas de mascotas flotando en el fondo -->
+  <div class="pets-bg" aria-hidden="true">
+    <span class="pet pet-1">🐕</span>
+    <span class="pet pet-2">🐈</span>
+    <span class="pet pet-3">🐩</span>
+    <span class="pet pet-4">🐾</span>
+    <span class="pet pet-5">🐶</span>
+    <span class="pet pet-6">🐱</span>
+    <span class="pet pet-7">🐾</span>
+    <span class="pet pet-8">🐕‍🦺</span>
+  </div>
+
+  <div class="login-wrapper">
+    <div class="login-card">
+      <img src="/img/logo_san_roque.png" alt="San Roque" class="login-logo" />
+      <h1>Bienvenido</h1>
+      <p class="login-tagline">
+        El mejor <span class="highlight-pink">Spa</span> para
+        <span class="highlight-yellow">Woofies</span> y <span class="highlight-yellow">Michis</span>
+      </p>
+      <p class="login-subtitle">Ingresa tus credenciales para continuar</p>
+      <form id="loginForm">
+        <label>
+          <span>Usuario</span>
+          <input name="username" type="text" required autofocus placeholder="Tu usuario" />
+        </label>
+        <label>
+          <span>Contraseña</span>
+          <div class="password-field">
+            <input id="passwordInput" name="password" type="password" required placeholder="Tu contraseña" />
+            <button type="button" class="toggle-pw" id="togglePw" aria-label="Mostrar contraseña">
+              <svg id="eyeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg id="eyeOffIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+        </label>
+        <div id="loginErrors" class="login-errors" aria-live="polite"></div>
+        <button type="submit">Ingresar</button>
+      </form>
+    </div>
+  </div>
+  <script src="/login.js" defer></script>
+</body>
+</html>

@@ -1,24 +1,244 @@
-:root { color-scheme: light dark; }
-body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 0; }
-.container { max-width: 820px; margin: 24px auto; padding: 0 16px; }
-h1 { font-size: 1.6rem; }
-form { display: grid; gap: 16px; }
-fieldset { border: 1px solid #ccc; padding: 12px; border-radius: 8px; }
-label { display: grid; gap: 6px; margin: 8px 0; }
-input, select, textarea, button { padding: 8px; font-size: 1rem; }
-button { cursor: pointer; }
-.errors { color: #b00020; }
-.success { color: #0a7a29; margin-top: 12px; }
-.highlight-required { background: rgba(255, 215, 0, 0.25); }
-.money { font-variant-numeric: tabular-nums; }
-.money.negative { color: #b00020; }
-.money.positive { color: #0a7a29; }
-.mascota-card { border: 1px solid #ddd; border-radius: 8px; padding: 8px 10px; margin: 8px 0; background: rgba(0,0,0,0.02); }
-.mascota-card-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
-.pedido-item { list-style: none; border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; margin: 6px 0; background: rgba(0,0,0,0.02); display: grid; gap: 4px; }
-.pedido-item-header { display: flex; justify-content: space-between; align-items: center; font-weight: 500; }
-.pedido-meta { font-size: 0.9rem; opacity: 0.9; }
-.pedido-actions { display: flex; gap: 6px; }
-.pedido-item.selected { border-color: #0a7a29; background: rgba(10,122,41,0.05); }
-.badge { padding: 2px 6px; border-radius: 999px; background: rgba(0,0,0,0.08); font-size: 0.8rem; }
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
 
+/* ---- Reset & base ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  background: #111827; color: #f9fafb;
+  min-height: 100vh;
+}
+
+/* ---- Header ---- */
+.app-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 24px;
+  background: #1f2937; border-bottom: 1px solid #374151;
+  position: sticky; top: 0; z-index: 100;
+}
+.app-header-left { display: flex; align-items: center; gap: 12px; }
+.app-header img { height: 28px; width: auto; object-fit: contain; }
+.app-header .app-title { font-size: 1rem; font-weight: 700; color: #f9fafb; }
+.app-header nav { display: flex; gap: 16px; }
+.app-header nav a { color: #d1d5db; text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+.app-header nav a:hover, .app-header nav a.active { color: #818cf8; }
+.app-header-right { display: flex; align-items: center; gap: 12px; }
+.user-badge { font-size: 0.8rem; color: #9ca3af; }
+.btn-logout {
+  padding: 6px 12px; border-radius: 6px; border: 1px solid #4b5563;
+  background: transparent; color: #d1d5db; font-size: 0.8rem; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-logout:hover { background: #374151; color: #f9fafb; }
+
+/* ---- Layout ---- */
+.container { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
+
+/* ---- Typography ---- */
+h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 16px; color: #f9fafb; }
+h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; color: #e5e7eb; }
+p { color: #d1d5db; font-size: 0.9rem; }
+legend { font-weight: 600; font-size: 0.95rem; color: #a5b4fc; }
+
+/* ---- Forms ---- */
+form { display: grid; gap: 16px; }
+fieldset {
+  border: 1px solid #374151; padding: 16px; border-radius: 12px;
+  background: #1f2937;
+}
+label { display: grid; gap: 6px; margin: 8px 0; font-size: 0.9rem; color: #d1d5db; }
+input, select, textarea {
+  padding: 10px 12px; border-radius: 8px; border: 1px solid #4b5563;
+  background: #111827; color: #f9fafb; font-size: 0.95rem;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  outline: none; transition: border-color 0.2s;
+}
+input:focus, select:focus, textarea:focus { border-color: #6366f1; }
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+textarea { resize: vertical; min-height: 60px; }
+
+/* ---- Buttons ---- */
+button {
+  padding: 10px 16px; border: none; border-radius: 8px;
+  font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  transition: all 0.2s;
+}
+button[type="submit"], .btn-primary {
+  background: #6366f1; color: #fff;
+}
+button[type="submit"]:hover, .btn-primary:hover { background: #4f46e5; }
+button[type="button"] {
+  background: #374151; color: #d1d5db; border: 1px solid #4b5563;
+}
+button[type="button"]:hover { background: #4b5563; color: #f9fafb; }
+
+/* ---- Feedback ---- */
+.errors { color: #f87171; font-size: 0.85rem; }
+.success { color: #34d399; margin-top: 12px; font-weight: 500; }
+.hint { font-size: 0.85rem; color: #9ca3af; }
+.highlight-required { background: rgba(251, 191, 36, 0.12) !important; border-color: #f59e0b !important; }
+
+/* ---- Money ---- */
+.money { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 0.95rem; }
+.money.negative { color: #f87171; }
+.money.positive { color: #34d399; }
+
+/* ---- Mascota cards ---- */
+.mascota-card {
+  border: 1px solid #374151; border-radius: 10px; padding: 12px 14px;
+  margin: 10px 0; background: #1a2332;
+}
+.mascota-card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-weight: 600; color: #a5b4fc; margin-bottom: 6px;
+}
+
+/* ---- Pedido items ---- */
+#listaPedidos { list-style: none; padding: 0; }
+.pedido-item {
+  border: 1px solid #374151; border-radius: 10px; padding: 12px 14px;
+  margin: 8px 0; background: #1a2332; display: grid; gap: 6px;
+  cursor: default; transition: all 0.2s;
+}
+.pedido-item:hover { border-color: #6366f1; }
+.pedido-item-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-weight: 600; color: #e5e7eb;
+}
+.pedido-meta { font-size: 0.85rem; color: #9ca3af; }
+.pedido-actions { display: flex; gap: 8px; margin-top: 4px; }
+.pedido-actions button { font-size: 0.85rem; padding: 6px 14px; }
+.pedido-item.selected { border-color: #34d399; background: rgba(52,211,153,0.06); }
+.badge {
+  padding: 3px 10px; border-radius: 999px;
+  background: rgba(99,102,241,0.15); color: #a5b4fc;
+  font-size: 0.8rem; font-weight: 500;
+}
+
+/* ---- Lookup options ---- */
+#lookupOptions[hidden] { display: none; }
+#lookupOptions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+#lookupOptions p { width: 100%; color: #34d399; font-weight: 500; }
+
+/* ---- Checkbox label ---- */
+.checkbox-label {
+  display: flex !important; align-items: center; gap: 10px;
+  cursor: pointer; margin: 12px 0;
+}
+.checkbox-label input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: #6366f1; cursor: pointer;
+}
+.checkbox-label span { font-size: 0.9rem; color: #d1d5db; }
+
+/* ---- Searchable select (Raza) ---- */
+.searchable-select { position: relative; }
+.searchable-input {
+  width: 100%; cursor: text;
+}
+.searchable-dropdown {
+  display: none; position: absolute; left: 0; right: 0; top: 100%;
+  max-height: 220px; overflow-y: auto; z-index: 50;
+  background: #1f2937; border: 1px solid #4b5563; border-top: none;
+  border-radius: 0 0 8px 8px;
+}
+.searchable-select.open .searchable-dropdown { display: block; }
+.searchable-dropdown .ss-option {
+  padding: 8px 12px; font-size: 0.9rem; color: #d1d5db;
+  cursor: pointer; transition: background 0.15s;
+}
+.searchable-dropdown .ss-option:hover,
+.searchable-dropdown .ss-option.highlighted { background: #374151; color: #f9fafb; }
+.searchable-dropdown .ss-empty {
+  padding: 10px 12px; font-size: 0.85rem; color: #6b7280; font-style: italic;
+}
+
+/* ---- Price hint ---- */
+#precioSugerido {
+  background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.25);
+  border-radius: 8px; padding: 8px 12px; color: #a5b4fc;
+  font-size: 0.85rem; font-weight: 500;
+}
+
+/* ---- Groomer cards ---- */
+.groomer-card {
+  display: flex; justify-content: space-between; align-items: center;
+  border: 1px solid #374151; border-radius: 10px; padding: 12px 14px;
+  margin: 8px 0; background: #1a2332; transition: all 0.2s;
+}
+.groomer-card.groomer-inactive { opacity: 0.55; }
+.groomer-info { display: flex; flex-direction: column; gap: 2px; }
+.groomer-info strong { color: #e5e7eb; font-size: 0.95rem; }
+.groomer-doc { font-size: 0.8rem; color: #9ca3af; }
+.groomer-actions { display: flex; gap: 6px; }
+.groomer-actions button { font-size: 0.8rem; padding: 5px 12px; }
+.btn-danger { background: #7f1d1d !important; color: #fca5a5 !important; border-color: #991b1b !important; }
+.btn-danger:hover { background: #991b1b !important; }
+.btn-success { background: #064e3b !important; color: #6ee7b7 !important; border-color: #065f46 !important; }
+.btn-success:hover { background: #065f46 !important; }
+.badge-active { background: rgba(52,211,153,0.15); color: #34d399; }
+.badge-inactive { background: rgba(248,113,113,0.15); color: #f87171; }
+
+/* ---- Dashboard ---- */
+.dash-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.dash-filters label { flex: 1; min-width: 140px; }
+.dash-filters button { align-self: flex-end; margin-bottom: 0; }
+
+.dash-summary {
+  display: flex; gap: 16px; flex-wrap: wrap; margin: 16px 0;
+}
+.dash-stat {
+  flex: 1; min-width: 180px; background: #1f2937; border: 1px solid #374151;
+  border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px;
+}
+.dash-stat-label { font-size: 0.8rem; color: #9ca3af; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+.dash-stat-value { font-size: 1.3rem; font-weight: 700; color: #f9fafb; }
+.dash-stat-detail { font-size: 0.85rem; font-weight: 500; color: #a5b4fc; }
+
+.dash-table-wrap { overflow-x: auto; }
+.dash-table {
+  width: 100%; border-collapse: collapse; font-size: 0.85rem;
+}
+.dash-table th {
+  text-align: left; padding: 10px 8px; font-weight: 600; color: #a5b4fc;
+  border-bottom: 2px solid #374151; white-space: nowrap;
+}
+.dash-table td {
+  padding: 8px; border-bottom: 1px solid #1f2937; color: #d1d5db;
+  white-space: nowrap;
+}
+.dash-table tr:hover td { background: rgba(99,102,241,0.05); }
+.txt-red { color: #f87171; }
+.txt-green { color: #34d399; }
+
+/* ---- Footer ---- */
+.app-footer {
+  text-align: center; padding: 24px 16px; margin-top: 40px;
+  border-top: 1px solid #1f2937; color: #6b7280; font-size: 0.8rem;
+}
+.app-footer .heart {
+  display: inline-block; color: #f87171; font-size: 1rem;
+  animation: heartbeat 1.4s ease-in-out infinite;
+}
+.app-footer a {
+  color: #818cf8; text-decoration: none; font-weight: 600;
+  transition: color 0.2s;
+}
+.app-footer a:hover { color: #a5b4fc; text-decoration: underline; }
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.2); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.2); }
+  56% { transform: scale(1); }
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 600px) {
+  .app-header { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+  .app-header nav { gap: 10px; }
+  .container { padding: 16px 10px; }
+  fieldset { padding: 10px; }
+}

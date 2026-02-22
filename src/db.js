@@ -244,6 +244,7 @@ async function getMascotasByTelefono(telefono) {
        id,
        telefono_propietario,
        nombre_mascota,
+       tipo_mascota,
        alimento_mascota,
        fecha_nacimiento,
        fecha_antipulgas,
@@ -268,48 +269,70 @@ async function replaceMascotasForTelefono(telefono, mascotas) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await client.query(
-      `DELETE FROM ${schema}.mascotas WHERE telefono_propietario = $1`,
-      [telefono]
-    );
-    if (Array.isArray(mascotas)) {
-      for (const m of mascotas) {
-        const nombre = m && m.nombre_mascota ? String(m.nombre_mascota).trim() : '';
-        if (!nombre) continue; // ignorar mascotas sin nombre
+
+    const incoming = Array.isArray(mascotas) ? mascotas : [];
+    const incomingNames = new Set();
+
+    for (const m of incoming) {
+      const nombre = m && m.nombre_mascota ? String(m.nombre_mascota).trim() : '';
+      if (!nombre) continue;
+      incomingNames.add(nombre);
+
+      const vals = [
+        m.tipo_mascota || null,
+        m.alimento_mascota || null,
+        m.fecha_nacimiento || null,
+        m.fecha_antipulgas || null,
+        m.producto_antipulgas || null,
+        m.fecha_antiparasitario || null,
+        m.producto_antiparasitario || null,
+        typeof m.alergias === 'boolean' ? m.alergias : null,
+        m.observaciones || null,
+        m.raza || null,
+        m.tamano || null,
+        m.pelaje || null,
+      ];
+
+      const { rows } = await client.query(
+        `SELECT id FROM ${schema}.mascotas WHERE telefono_propietario = $1 AND nombre_mascota = $2 LIMIT 1`,
+        [telefono, nombre]
+      );
+
+      if (rows.length > 0) {
+        await client.query(
+          `UPDATE ${schema}.mascotas SET
+             tipo_mascota = $3, alimento_mascota = $4,
+             fecha_nacimiento = $5, fecha_antipulgas = $6, producto_antipulgas = $7,
+             fecha_antiparasitario = $8, producto_antiparasitario = $9,
+             alergias = $10, observaciones = $11, raza = $12, tamano = $13, pelaje = $14
+           WHERE telefono_propietario = $1 AND nombre_mascota = $2`,
+          [telefono, nombre, ...vals]
+        );
+      } else {
         await client.query(
           `INSERT INTO ${schema}.mascotas (
-             telefono_propietario,
-             nombre_mascota,
-             alimento_mascota,
-             fecha_nacimiento,
-             fecha_antipulgas,
-             producto_antipulgas,
-             fecha_antiparasitario,
-             producto_antiparasitario,
-             alergias,
-             observaciones,
-             raza,
-             tamano,
-             pelaje
-           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-          [
-            telefono,
-            nombre,
-            m.alimento_mascota || null,
-            m.fecha_nacimiento || null,
-            m.fecha_antipulgas || null,
-            m.producto_antipulgas || null,
-            m.fecha_antiparasitario || null,
-            m.producto_antiparasitario || null,
-            typeof m.alergias === 'boolean' ? m.alergias : null,
-            m.observaciones || null,
-            m.raza || null,
-            m.tamano || null,
-            m.pelaje || null,
-          ]
+             telefono_propietario, nombre_mascota,
+             tipo_mascota, alimento_mascota,
+             fecha_nacimiento, fecha_antipulgas, producto_antipulgas,
+             fecha_antiparasitario, producto_antiparasitario,
+             alergias, observaciones, raza, tamano, pelaje
+           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+          [telefono, nombre, ...vals]
         );
       }
     }
+
+    // Solo borrar mascotas que ya no están en la lista Y no tienen pedidos vinculados
+    if (incomingNames.size > 0) {
+      await client.query(
+        `DELETE FROM ${schema}.mascotas
+         WHERE telefono_propietario = $1
+           AND nombre_mascota != ALL($2::text[])
+           AND id NOT IN (SELECT mascota_id FROM ${schema}.pedidos WHERE mascota_id IS NOT NULL)`,
+        [telefono, Array.from(incomingNames)]
+      );
+    }
+
     await client.query('COMMIT');
   } catch (e) {
     await client.query('ROLLBACK');
@@ -377,20 +400,77 @@ async function upsertMascotaBasica({ telefono_propietario, mascota_id, nombre_ma
   return rows[0];
 }
 
+// ----- Dashboard -----
+async function getPedidosCerradosPorFecha(fechaDesde, fechaHasta) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `SELECT id, telefono_propietario, telefono_acudiente, fecha_hora,
+            nombre_mascota, raza, tamano, pelaje, servicio,
+            precio, adicionales_descuentos,
+            (COALESCE(precio,0) + COALESCE(adicionales_descuentos,0)) AS precio_final,
+            metodo_pago, groomer1, groomer2
+     FROM ${schema}.pedidos
+     WHERE cerrado = true
+       AND (fecha_hora AT TIME ZONE 'America/Bogota')::date >= $1::date
+       AND (fecha_hora AT TIME ZONE 'America/Bogota')::date <= $2::date
+     ORDER BY fecha_hora DESC`,
+    [fechaDesde, fechaHasta]
+  );
+  return rows;
+}
+
+// ----- Groomers -----
+async function getAllGroomers() {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `SELECT id, documento, nombre, apellido, activo, created_at FROM ${schema}.groomers ORDER BY nombre, apellido`
+  );
+  return rows;
+}
+
+async function getActiveGroomers() {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `SELECT id, documento, nombre, apellido FROM ${schema}.groomers WHERE activo = true ORDER BY nombre, apellido`
+  );
+  return rows;
+}
+
+async function insertGroomer({ documento, nombre, apellido }) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `INSERT INTO ${schema}.groomers (documento, nombre, apellido) VALUES ($1, $2, $3) RETURNING *`,
+    [documento, nombre, apellido]
+  );
+  return rows[0];
+}
+
+async function updateGroomer(id, { documento, nombre, apellido }) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `UPDATE ${schema}.groomers SET documento = $2, nombre = $3, apellido = $4 WHERE id = $1 RETURNING *`,
+    [id, documento, nombre, apellido]
+  );
+  return rows[0] || null;
+}
+
+async function toggleGroomerActivo(id, activo) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `UPDATE ${schema}.groomers SET activo = $2 WHERE id = $1 RETURNING *`,
+    [id, activo]
+  );
+  return rows[0] || null;
+}
+
 module.exports = {
-  pool,
-  ping,
-  insertCliente,
-  findClienteByTelefono,
-  updateCliente,
-  insertPedido,
-  updatePedido,
-  findPedidosHoyPorTelefono,
-  getRazasTamano,
-  getMascotasByTelefono,
-  replaceMascotasForTelefono,
-  upsertMascotaBasica,
-  cerrarPedido,
+  pool, ping,
+  insertCliente, findClienteByTelefono, updateCliente,
+  insertPedido, updatePedido, findPedidosHoyPorTelefono,
+  getRazasTamano, getMascotasByTelefono, replaceMascotasForTelefono,
+  upsertMascotaBasica, cerrarPedido,
+  getPedidosCerradosPorFecha,
+  getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
 };
 
 

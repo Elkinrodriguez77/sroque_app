@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard - San Roque</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-left">
+      <img src="/img/logo_san_roque.png" alt="San Roque" />
+      <span class="app-title">San Roque</span>
+      <nav>
+        <a href="/">Clientes</a>
+        <a href="/pedido.html">Pedidos</a>
+        <a href="/groomers.html">Equipo</a>
+        <a href="/dashboard.html" class="active">Dashboard</a>
+      </nav>
+    </div>
+    <div class="app-header-right">
+      <span class="user-badge" id="userBadge"></span>
+      <button class="btn-logout" id="btnLogout">Salir</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>Dashboard - Servicios cerrados</h1>
+
+    <fieldset>
+      <legend>Filtrar por fecha</legend>
+      <div class="dash-filters">
+        <label>Desde
+          <input type="date" id="fechaDesde" />
+        </label>
+        <label>Hasta
+          <input type="date" id="fechaHasta" />
+        </label>
+        <button type="button" id="btnConsultar" class="btn-primary">Consultar</button>
+      </div>
+    </fieldset>
+
+    <div id="dashSummary" class="dash-summary" hidden></div>
+
+    <fieldset id="dashResults" hidden>
+      <legend>Resultados</legend>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead>
+            <tr>
+              <th>Fecha/Hora</th>
+              <th>Mascota</th>
+              <th>Servicio</th>
+              <th>Tamaño</th>
+              <th>Pelaje</th>
+              <th>Precio</th>
+              <th>Adic/Desc</th>
+              <th>Total</th>
+              <th>Pago</th>
+              <th>Groomer(s)</th>
+              <th>Teléfono</th>
+            </tr>
+          </thead>
+          <tbody id="dashBody"></tbody>
+        </table>
+      </div>
+    </fieldset>
+
+    <div id="dashMsg" class="errors" aria-live="polite"></div>
+  </main>
+
+  <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
+  <script src="/dashboard.js" defer></script>
+</body>
+</html>

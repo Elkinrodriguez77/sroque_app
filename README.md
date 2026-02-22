@@ -1,46 +1,71 @@
-## San Roque - Registro de Clientes
+# San Roque - Spa de Mascotas
 
-Aplicación mínima con Express + PostgreSQL para registrar clientes del spa de mascotas y guardar en la tabla `prod.clientes`.
+Aplicación web para gestión de clientes, mascotas, pedidos/servicios y equipo groomer del spa de mascotas San Roque.
 
-### Requisitos
-- Node.js 18+
-- Una base de datos PostgreSQL (Render) con la tabla creada
+## Requisitos
 
-### Configuración
-1. Crea el archivo de entorno:
-   - Copia `.env.example` a `.env` y rellena las variables.
-   - Este repo ya incluye `.gitignore` para no subir `.env`.
+- Node.js >= 18
+- PostgreSQL (Render u otro proveedor)
 
-2. Instala dependencias:
-   ```bash
-   npm install
-   ```
+## Instalación local
 
-3. Ejecuta en desarrollo:
-   ```bash
-   npm run dev
-   ```
+```bash
+npm install
+```
 
-4. Producción/local simple:
-   ```bash
-   npm start
-   ```
+## Variables de entorno
 
-La app sirve un formulario en `http://localhost:3000/` y expone `POST /api/clientes` para crear registros.
+Copia `.env.example` a `config/.env` y completa los valores:
 
-### Variables de entorno
-- `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSCHEMA`, `PGSSL` (true para Render)
-- `PORT` puerto HTTP del servidor
+```bash
+cp .env.example config/.env
+```
 
-### Despliegue en Render (Web Service)
-1. Crea un nuevo Web Service desde tu repo
-2. Runtime: Node 18
-3. Build command: `npm install`
-4. Start command: `npm start`
-5. Añade en Render las mismas variables de entorno del `.env`
+| Variable | Descripción |
+|---|---|
+| `PGHOST` | Host de PostgreSQL |
+| `PGPORT` | Puerto (default: 5432) |
+| `PGUSER` | Usuario de BD |
+| `PGPASSWORD` | Contraseña de BD |
+| `PGDATABASE` | Nombre de la BD |
+| `PGSCHEMA` | Esquema (default: prod) |
+| `PGSSL` | Usar SSL (true/false) |
+| `PORT` | Puerto del servidor web (default: 3000) |
+| `SESSION_SECRET` | Secreto para sesiones (generar uno seguro) |
 
-### Notas de seguridad
-- No subas `.env` al repositorio (ya ignorado).
-- Las consultas usan parámetros para prevenir inyección SQL.
-- SSL activado en conexión a PostgreSQL para Render.
+## Ejecución
 
+```bash
+# Desarrollo (con hot-reload)
+npm run dev
+
+# Producción
+npm start
+```
+
+## Gestión de usuarios
+
+```bash
+# Crear usuario
+node scripts/gestionar-usuario.js crear <username> <password> "Nombre"
+
+# Desactivar (cuando alguien se va)
+node scripts/gestionar-usuario.js desactivar <username>
+
+# Activar
+node scripts/gestionar-usuario.js activar <username>
+
+# Cambiar contraseña
+node scripts/gestionar-usuario.js cambiar-clave <username> <nueva_password>
+
+# Listar todos
+node scripts/gestionar-usuario.js listar
+```
+
+## Despliegue en Render
+
+1. Crear un **Web Service** conectado al repositorio de GitHub
+2. **Build Command:** `npm install`
+3. **Start Command:** `npm start`
+4. Configurar las variables de entorno (ver tabla arriba)
+5. El servicio arranca automáticamente al hacer push

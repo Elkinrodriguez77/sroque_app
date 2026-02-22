@@ -1,45 +1,179 @@
+// Session UI
+(async function loadSession() {
+  try {
+    const r = await fetch('/api/me');
+    if (!r.ok) { window.location.href = '/login.html'; return; }
+    const { nombre, username } = await r.json();
+    const badge = document.getElementById('userBadge');
+    if (badge) badge.textContent = nombre || username || '';
+  } catch { window.location.href = '/login.html'; }
+})();
+document.getElementById('btnLogout')?.addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login.html';
+});
+
 let RAZAS = [];
 let RAZA_TAMANO = {};
 let MASCOTAS = [];
 
-const SERVICIOS = ['HERBAL PET SPA','ROCKSTAR','SANROQUERO','SHANTI PET SPA','SUPERSTAR','OTRO'];
-const METODOS_PAGO = ['Billetera digital','Cortesía','Efectivo','Garantía','Promoción','Tarjeta crédito','Tarjeta débito','Transferencia'];
-const PELAJE = ['Corto','Medio','Largo'];
-const GROOMERS = ['Alejandra','Andrés','Angie','Camila','Carolina','Daniela','Darwin','Eliana','Esteban','Gustavo','Héctor','Isabel','Jeidy','Jeison','Jesús','Joel','Jordy','Juan','Julieth','Karol','Katherine','Keni','Laura','Lili','Loren','Lulu','Manuel','María Fernanda','Maryori','Miguel','San Roque','Santiago','Steven','Tatiana','Vanessa','Otro'];
+let GROOMERS_LIST = [];
 
-function fillDatalist(datalist, items) {
-  datalist.innerHTML = '';
-  const frag = document.createDocumentFragment();
-  for (const item of items) {
-    const opt = document.createElement('option');
-    opt.value = item;
-    frag.appendChild(opt);
+// Tabla de precios sugeridos [servicio][pelaje_grupo][tamano] = precio
+const PRECIOS = {
+  'SanRoquero': {
+    corto:      { Minis: 65000, 'Pequeños': 78000,  Medianos: 91000,  Grandes: 103000, Gigantes: 116000 },
+    largo:      { Minis: 84000, 'Pequeños': 97000,  Medianos: 110000, Grandes: 129000, Gigantes: 218000 },
+  },
+  'Rockstar': {
+    corto:      { Minis: 76000, 'Pequeños': 88000,  Medianos: 101000, Grandes: 117000, Gigantes: 130000 },
+    largo:      { Minis: 94000, 'Pequeños': 106000, Medianos: 125000, Grandes: 157000, Gigantes: 246000 },
+  },
+  'Superstar': {
+    corto:      { Minis: 97000,  'Pequeños': 110000, Medianos: 122000, Grandes: 143000, Gigantes: 155000 },
+    largo:      { Minis: 116000, 'Pequeños': 129000, Medianos: 145000, Grandes: 176000, Gigantes: 265000 },
+  },
+  'Shanti Spa': {
+    corto:      { Minis: 157000, 'Pequeños': 170000, Medianos: 183000, Grandes: 206000, Gigantes: 229000 },
+    largo:      { Minis: 175000, 'Pequeños': 188000, Medianos: 201000, Grandes: 232000, Gigantes: 308000 },
+  },
+};
+
+// Mapeo de tamaños viejos a nuevos (por compatibilidad con datos existentes)
+const TAMANO_MAP = { 'Pequeño': 'Pequeños', 'Mediano': 'Medianos', 'Grande': 'Grandes' };
+function normalizeTamano(t) { return TAMANO_MAP[t] || t; }
+
+// ---- Searchable Raza dropdown ----
+function initRazaDropdown() {
+  const wrapper = document.getElementById('razaWrapper');
+  const search = document.getElementById('razaSearch');
+  const hidden = document.getElementById('razaValue');
+  const dropdown = document.getElementById('razaDropdown');
+
+  function render(filter) {
+    dropdown.innerHTML = '';
+    const q = (filter || '').toLowerCase();
+    const filtered = q ? RAZAS.filter(r => r.toLowerCase().includes(q)) : RAZAS;
+    if (filtered.length === 0) {
+      dropdown.innerHTML = '<div class="ss-empty">Sin resultados</div>';
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    for (const raza of filtered) {
+      const div = document.createElement('div');
+      div.className = 'ss-option';
+      div.textContent = raza;
+      div.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        selectRaza(raza);
+      });
+      frag.appendChild(div);
+    }
+    dropdown.appendChild(frag);
   }
-  datalist.appendChild(frag);
-}
 
-function setupFilterable(input, select) {
-  input.addEventListener('input', () => {
-    const q = input.value.toLowerCase();
-    for (const opt of select.options) {
-      if (!opt.value) continue;
-      opt.hidden = !opt.textContent.toLowerCase().includes(q);
+  function selectRaza(raza) {
+    hidden.value = raza;
+    search.value = raza;
+    wrapper.classList.remove('open');
+    onRazaChange();
+  }
+
+  search.addEventListener('focus', () => {
+    wrapper.classList.add('open');
+    render(search.value);
+  });
+
+  search.addEventListener('input', () => {
+    wrapper.classList.add('open');
+    render(search.value);
+    hidden.value = search.value;
+  });
+
+  search.addEventListener('blur', () => {
+    wrapper.classList.remove('open');
+    if (search.value && !RAZAS.includes(search.value)) {
+      hidden.value = search.value;
+    }
+  });
+
+  search.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      wrapper.classList.remove('open');
+      search.blur();
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const first = dropdown.querySelector('.ss-option');
+      if (first) selectRaza(first.textContent);
     }
   });
 }
 
+function setRazaValue(val) {
+  document.getElementById('razaSearch').value = val || '';
+  document.getElementById('razaValue').value = val || '';
+}
+
+// ---- Populate selects ----
+function fillSelect(selectEl, items) {
+  const current = selectEl.value;
+  const first = selectEl.options[0];
+  selectEl.innerHTML = '';
+  if (first) selectEl.appendChild(first);
+  for (const item of items) {
+    const opt = document.createElement('option');
+    opt.value = item;
+    opt.textContent = item;
+    selectEl.appendChild(opt);
+  }
+  selectEl.value = current;
+}
+
 function onRazaChange() {
-  const raza = document.getElementById('razaSelect').value;
+  const raza = document.getElementById('razaValue').value;
   const tamanoSelect = document.getElementById('tamanoSelect');
   if (RAZA_TAMANO[raza]) {
-    tamanoSelect.value = RAZA_TAMANO[raza];
+    tamanoSelect.value = normalizeTamano(RAZA_TAMANO[raza]);
   }
-  document.getElementById('razaOtroWrapper').hidden = !(raza && raza.toUpperCase() === 'OTROS');
+  suggestPrice();
 }
 
 function onServicioChange() {
   const s = document.getElementById('servicioSelect').value;
   document.getElementById('servicioOtroWrapper').hidden = s !== 'OTRO';
+  suggestPrice();
+}
+
+function suggestPrice() {
+  const servicio = document.getElementById('servicioSelect').value;
+  const tamano = document.getElementById('tamanoSelect').value;
+  const pelaje = document.getElementById('pelajeSelect').value;
+  const hintEl = document.getElementById('precioSugerido');
+  const precioInput = document.querySelector('#pedidoForm [name="precio"]');
+
+  if (!servicio || !tamano || !pelaje || !PRECIOS[servicio]) {
+    hintEl.hidden = true;
+    return;
+  }
+
+  const grupo = pelaje === 'Corto' ? 'corto' : 'largo';
+  const tabla = PRECIOS[servicio]?.[grupo];
+  const precio = tabla?.[tamano];
+
+  if (precio == null) {
+    hintEl.hidden = true;
+    return;
+  }
+
+  const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+  hintEl.textContent = `Precio sugerido: ${fmt.format(precio)} (${servicio} · ${tamano} · ${pelaje})`;
+  hintEl.hidden = false;
+
+  if (Number(precioInput.value) === 0) {
+    precioInput.value = precio;
+    updateMoney();
+  }
 }
 
 async function submitPedido(event) {
@@ -49,7 +183,6 @@ async function submitPedido(event) {
   const errorsEl = document.getElementById('pedidoErrors');
   errorsEl.textContent = '';
 
-  // Validar que fecha_hora no sea en el futuro (según hora local del navegador)
   if (data.fecha_hora) {
     const ahora = new Date();
     const elegida = new Date(data.fecha_hora);
@@ -59,13 +192,16 @@ async function submitPedido(event) {
     }
   }
 
-  // Si servicio = OTRO usar servicio_otro
+  const groomerErr = validateGroomers();
+  if (groomerErr) {
+    errorsEl.textContent = groomerErr;
+    return;
+  }
+
   if (data.servicio === 'OTRO' && data.servicio_otro) {
     data.servicio = data.servicio_otro;
   }
   delete data.servicio_otro;
-  // Omitir campo libre de raza: siempre usar lista
-  delete data.raza_otro;
 
   try {
     const id = data.id && String(data.id).trim();
@@ -78,14 +214,15 @@ async function submitPedido(event) {
     });
     const body = await resp.json().catch(() => ({}));
     if (!resp.ok) {
-      errorsEl.textContent = (body && body.errors && body.errors.join(', ')) || 'Error al guardar pedido';
+      errorsEl.textContent = (body?.errors?.join(', ')) || 'Error al guardar pedido';
       return;
     }
     form.reset();
-    // prefill from storage again
+    setRazaValue('');
     prefillPhones();
+    document.getElementById('precioSugerido').hidden = true;
     await buscarPedidos();
-  } catch (e) {
+  } catch {
     errorsEl.textContent = 'Error de red al guardar pedido';
   }
 }
@@ -110,7 +247,7 @@ async function buscarPedidos() {
       header.className = 'pedido-item-header';
       const hora = p.fecha_hora ? new Date(p.fecha_hora).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '';
       const left = document.createElement('span');
-      left.textContent = `${hora} · ${p.servicio}`;
+      left.textContent = `${hora} · ${p.servicio || 'Sin servicio'}`;
       const right = document.createElement('span');
       right.className = 'badge';
       right.textContent = p.nombre_mascota || 'Sin nombre';
@@ -144,7 +281,7 @@ async function buscarPedidos() {
       li.appendChild(actions);
       ul.appendChild(li);
     });
-  } catch (e) {
+  } catch {
     msg.textContent = 'Error de red al buscar';
   }
 }
@@ -154,20 +291,21 @@ function cargarPedidoEnFormulario(p) {
   form.elements['id'].value = p.id;
   form.elements['telefono_propietario'].value = p.telefono_propietario || '';
   form.elements['telefono_acudiente'].value = p.telefono_acudiente || '';
-  form.elements['fecha_hora'].value = p.fecha_hora ? new Date(p.fecha_hora).toISOString().slice(0,16) : '';
+  form.elements['fecha_hora'].value = p.fecha_hora ? new Date(p.fecha_hora).toISOString().slice(0, 16) : '';
   form.elements['mascota_id'].value = p.mascota_id || '';
   document.getElementById('nombreMascota').value = p.nombre_mascota || '';
-  form.elements['raza'].value = p.raza || '';
-  document.getElementById('tamanoSelect').value = p.tamano || '';
+  setRazaValue(p.raza || '');
+  document.getElementById('tamanoSelect').value = normalizeTamano(p.tamano || '');
   document.getElementById('pelajeSelect').value = p.pelaje || '';
   document.getElementById('servicioSelect').value = p.servicio || '';
+  onServicioChange();
   document.getElementById('metodoPagoSelect').value = p.metodo_pago || '';
-  // precios y pagos
   form.elements['precio'].value = (p.precio != null) ? p.precio : 0;
   form.elements['adicionales_descuentos'].value = (p.adicionales_descuentos != null) ? p.adicionales_descuentos : 0;
   document.getElementById('groomer1Select').value = p.groomer1 || '';
   document.getElementById('groomer2Select').value = p.groomer2 || '';
   updateMoney();
+  document.getElementById('precioSugerido').hidden = true;
 }
 
 function prefillPhones() {
@@ -175,13 +313,13 @@ function prefillPhones() {
     const pre = JSON.parse(localStorage.getItem('pedido_prefill') || '{}');
     if (pre.telefono_propietario) document.querySelector('#pedidoForm [name="telefono_propietario"]').value = pre.telefono_propietario;
     if (pre.telefono_acudiente) document.querySelector('#pedidoForm [name="telefono_acudiente"]').value = pre.telefono_acudiente;
-  } catch {}
+  } catch { /* ignore */ }
 }
 
 async function cargarMascotasPorTelefono() {
   const tel = document.querySelector('#pedidoForm [name="telefono_propietario"]').value.trim();
   const sel = document.getElementById('mascotaSelect');
-  sel.innerHTML = '<option value=\"\">Nueva mascota / sin seleccionar</option>';
+  sel.innerHTML = '<option value="">Nueva mascota / sin seleccionar</option>';
   MASCOTAS = [];
   if (!tel) return;
   try {
@@ -195,47 +333,40 @@ async function cargarMascotasPorTelefono() {
       opt.textContent = m.nombre_mascota || `Mascota ${m.id}`;
       sel.appendChild(opt);
     }
-  } catch (e) {
-    // silencioso
-  }
+  } catch { /* silent */ }
 }
 
 function onMascotaChange() {
-  const sel = document.getElementById('mascotaSelect');
-  const id = sel.value;
-  const nombreInput = document.getElementById('nombreMascota');
-  if (!id) {
-    // nueva mascota: no tocar raza/tamaño/pelaje
-    return;
-  }
+  const id = document.getElementById('mascotaSelect').value;
+  if (!id) return;
   const m = MASCOTAS.find((x) => String(x.id) === String(id));
   if (!m) return;
-  nombreInput.value = m.nombre_mascota || '';
-  document.getElementById('razaSelect').value = m.raza || '';
-  document.getElementById('tamanoSelect').value = m.tamano || '';
+  document.getElementById('nombreMascota').value = m.nombre_mascota || '';
+  setRazaValue(m.raza || '');
+  document.getElementById('tamanoSelect').value = normalizeTamano(m.tamano || '');
   document.getElementById('pelajeSelect').value = m.pelaje || '';
 }
 
 async function cerrarPedido(id) {
   const msg = document.getElementById('pedidosMsg');
   msg.textContent = '';
-  const ok = window.confirm('¿Seguro que deseas cerrar este pedido? Ya no se podrá editar.');
-  if (!ok) return;
+  if (!window.confirm('¿Seguro que deseas cerrar este pedido? Ya no se podrá editar.')) return;
   try {
     const resp = await fetch(`/api/pedidos/${id}/cerrar`, { method: 'POST' });
     const body = await resp.json().catch(() => ({}));
     if (!resp.ok || !body.ok) {
-      msg.textContent = (body && body.errors && body.errors.join(', ')) || 'No se pudo cerrar el pedido';
+      msg.textContent = (body?.errors?.join(', ')) || 'No se pudo cerrar el pedido';
       return;
     }
-    // refrescar lista y limpiar formulario
     await buscarPedidos();
     const form = document.getElementById('pedidoForm');
     form.reset();
+    setRazaValue('');
     prefillPhones();
     updateMoney();
+    document.getElementById('precioSugerido').hidden = true;
     document.querySelectorAll('.pedido-item.selected').forEach((n) => n.classList.remove('selected'));
-  } catch (e) {
+  } catch {
     msg.textContent = 'Error de red al cerrar pedido';
   }
 }
@@ -246,47 +377,67 @@ function updateMoney() {
   const adic = Number(f.elements['adicionales_descuentos'].value || 0);
   const total = base + adic;
   const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
-  const baseEl = document.getElementById('precioFmt');
+  document.getElementById('precioFmt').textContent = fmt.format(base);
   const adicEl = document.getElementById('adicionalesFmt');
-  const totalEl = document.getElementById('precioFinal');
-  baseEl.textContent = fmt.format(base);
   adicEl.textContent = fmt.format(adic);
-  totalEl.textContent = fmt.format(total);
   adicEl.classList.toggle('negative', adic < 0);
   adicEl.classList.toggle('positive', adic > 0);
+  document.getElementById('precioFinal').textContent = fmt.format(total);
+}
+
+async function loadGroomers() {
+  try {
+    const resp = await fetch('/api/groomers/activos');
+    const { ok, data } = await resp.json();
+    if (ok && data) {
+      GROOMERS_LIST = data.map(g => ({ id: g.id, label: `${g.nombre} ${g.apellido}` }));
+    }
+  } catch { /* silent */ }
+  const names = GROOMERS_LIST.map(g => g.label);
+  fillSelect(document.getElementById('groomer1Select'), names);
+  fillSelect(document.getElementById('groomer2Select'), names);
+}
+
+function validateGroomers() {
+  const g1 = document.getElementById('groomer1Select').value;
+  const g2 = document.getElementById('groomer2Select').value;
+  if (g1 && g2 && g1 === g2) {
+    return 'El Groomer 2 no puede ser igual al Groomer 1.';
+  }
+  return null;
 }
 
 function init() {
-  // Cargar catálogo desde servidor
+  // Cargar razas desde BD
   fetch('/api/catalogos/raza-tamano')
     .then(r => r.json()).then(({ ok, data }) => {
       if (ok && data) {
         RAZAS = data.razas || [];
         RAZA_TAMANO = data.mapping || {};
       }
-      fillDatalist(document.getElementById('razas'), RAZAS);
     })
-    .catch(() => fillDatalist(document.getElementById('razas'), RAZAS));
-  fillDatalist(document.getElementById('servicios'), SERVICIOS);
-  fillDatalist(document.getElementById('metodosPago'), METODOS_PAGO);
-  fillDatalist(document.getElementById('groomers'), GROOMERS);
-  document.getElementById('razaSelect').addEventListener('change', onRazaChange);
+    .catch(() => {});
+
+  // Llenar groomers desde BD
+  loadGroomers();
+
+  initRazaDropdown();
+
   document.getElementById('servicioSelect').addEventListener('change', onServicioChange);
+  document.getElementById('tamanoSelect').addEventListener('change', suggestPrice);
+  document.getElementById('pelajeSelect').addEventListener('change', suggestPrice);
   document.getElementById('pedidoForm').addEventListener('submit', submitPedido);
   document.getElementById('btnBuscarPedidos').addEventListener('click', buscarPedidos);
   document.getElementById('pedidoForm').elements['precio'].addEventListener('input', updateMoney);
   document.getElementById('pedidoForm').elements['adicionales_descuentos'].addEventListener('input', updateMoney);
   document.getElementById('pedidoForm').elements['telefono_propietario'].addEventListener('change', cargarMascotasPorTelefono);
   document.getElementById('mascotaSelect').addEventListener('change', onMascotaChange);
+
   prefillPhones();
-  // Prefill filtro con teléfono propietario si existe
   const pre = JSON.parse(localStorage.getItem('pedido_prefill') || '{}');
   if (pre.telefono_propietario) document.getElementById('filtroTelefono').value = pre.telefono_propietario;
-  // cargar mascotas iniciales si hay teléfono prefijado
   cargarMascotasPorTelefono();
   updateMoney();
 }
 
 document.addEventListener('DOMContentLoaded', init);
-
-

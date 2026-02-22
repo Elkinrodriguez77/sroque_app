@@ -1,3 +1,18 @@
+// Session UI
+(async function loadSession() {
+  try {
+    const r = await fetch('/api/me');
+    if (!r.ok) { window.location.href = '/login.html'; return; }
+    const { nombre, username } = await r.json();
+    const badge = document.getElementById('userBadge');
+    if (badge) badge.textContent = nombre || username || '';
+  } catch { window.location.href = '/login.html'; }
+})();
+document.getElementById('btnLogout')?.addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login.html';
+});
+
 async function submitForm(event) {
   event.preventDefault();
   const form = event.currentTarget;
@@ -158,6 +173,7 @@ const btnAddMascota = document.getElementById('btnAddMascota');
 function createEmptyMascota() {
   return {
     nombre_mascota: '',
+    tipo_mascota: '',
     alimento_mascota: '',
     fecha_nacimiento: '',
     fecha_antipulgas: '',
@@ -189,6 +205,22 @@ function renderMascotas() {
       header.appendChild(btnDel);
     }
     card.appendChild(header);
+
+    // Tipo mascota (Perro / Gato)
+    const tipoLabel = document.createElement('label');
+    tipoLabel.textContent = 'Tipo';
+    const tipoSelect = document.createElement('select');
+    [['', 'Seleccione...'], ['Perro', 'Perro'], ['Gato', 'Gato']].forEach(([val, txt]) => {
+      const opt = document.createElement('option');
+      opt.value = val; opt.textContent = txt;
+      tipoSelect.appendChild(opt);
+    });
+    tipoSelect.value = m.tipo_mascota || '';
+    tipoSelect.addEventListener('change', (e) => {
+      window._mascotasState[idx].tipo_mascota = e.target.value;
+    });
+    tipoLabel.appendChild(tipoSelect);
+    card.appendChild(tipoLabel);
 
     const fields = [
       { label: 'Nombre', key: 'nombre_mascota', type: 'text', max: 200 },
@@ -255,6 +287,7 @@ function initMascotasSection(initialMascotas) {
     : [createEmptyMascota()];
   window._mascotasState = list.map((m) => ({
     nombre_mascota: m.nombre_mascota || '',
+    tipo_mascota: m.tipo_mascota || '',
     alimento_mascota: m.alimento_mascota || '',
     fecha_nacimiento: m.fecha_nacimiento || '',
     fecha_antipulgas: m.fecha_antipulgas || '',

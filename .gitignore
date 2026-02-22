@@ -7,17 +7,27 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# entorno
+# entorno (NUNCA subir credenciales)
 .env
 .env.*
 !.env.example
 config/.env
 config/.env.*
 
+# carpeta original de imágenes (logo ya está en public/img/)
+Imagenes/
+
 # sistema
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # editor/IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
+# cursor
+.cursor/

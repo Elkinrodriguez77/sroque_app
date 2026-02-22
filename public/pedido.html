@@ -1,119 +1,168 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Registrar pedido / servicio - San Roque</title>
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body>
-    <main class="container">
-      <h1>Pedidos del día</h1>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Registrar pedido / servicio - San Roque</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-left">
+      <img src="/img/logo_san_roque.png" alt="San Roque" />
+      <span class="app-title">San Roque</span>
+      <nav>
+        <a href="/">Clientes</a>
+        <a href="/pedido.html" class="active">Pedidos</a>
+        <a href="/groomers.html">Equipo</a>
+        <a href="/dashboard.html">Dashboard</a>
+      </nav>
+    </div>
+    <div class="app-header-right">
+      <span class="user-badge" id="userBadge"></span>
+      <button class="btn-logout" id="btnLogout">Salir</button>
+    </div>
+  </header>
 
-      <section>
-        <fieldset>
-          <legend>Buscar pedidos por teléfono (propietario o acudiente)</legend>
-          <input id="filtroTelefono" type="tel" maxlength="20" placeholder="Teléfono" />
-          <button id="btnBuscarPedidos" type="button">Buscar</button>
-          <div id="pedidosMsg" class="errors" aria-live="polite"></div>
-          <ul id="listaPedidos"></ul>
-        </fieldset>
-      </section>
+  <main class="container">
+    <h1>Pedidos del día</h1>
 
-      <form id="pedidoForm">
-        <input type="hidden" name="id" />
-        <fieldset>
-          <legend>Datos del contacto</legend>
-          <label>Teléfono propietario
-            <input name="telefono_propietario" type="tel" maxlength="20" required />
-          </label>
-          <label>Teléfono acudiente
-            <input name="telefono_acudiente" type="tel" maxlength="20" />
-          </label>
-          <label>Fecha y hora
-            <input name="fecha_hora" type="datetime-local" />
-          </label>
-        </fieldset>
+    <section>
+      <fieldset>
+        <legend>Buscar pedidos por teléfono (propietario o acudiente)</legend>
+        <input id="filtroTelefono" type="tel" maxlength="20" placeholder="Ej: 3001234567" />
+        <button id="btnBuscarPedidos" type="button" class="btn-primary">Buscar</button>
+        <div id="pedidosMsg" class="errors" aria-live="polite"></div>
+        <ul id="listaPedidos"></ul>
+      </fieldset>
+    </section>
 
-        <fieldset>
-          <legend>Datos de la mascota y servicio</legend>
-          <label>Mascota
-            <select id="mascotaSelect" name="mascota_id">
-              <option value="">Nueva mascota / sin seleccionar</option>
-            </select>
-          </label>
-          <label>Nombre de la mascota
-            <input id="nombreMascota" name="nombre_mascota" type="text" maxlength="200" />
-          </label>
-          <label>Raza (busca y selecciona)
-            <input list="razas" name="raza" id="razaSelect" placeholder="Escribe para buscar..." />
-            <datalist id="razas"></datalist>
-          </label>
-          
-          <label>Tamaño
-            <select name="tamano" id="tamanoSelect">
-              <option value="">Seleccione...</option>
-              <option>Grande</option>
-              <option>Mediano</option>
-              <option>Pequeño</option>
-            </select>
-          </label>
-          <label>Pelaje
-            <select name="pelaje" id="pelajeSelect">
-              <option value="">Seleccione...</option>
-              <option>Corto</option>
-              <option>Medio</option>
-              <option>Largo</option>
-            </select>
-          </label>
-          <label>Servicio (busca y selecciona)
-            <input list="servicios" name="servicio" id="servicioSelect" placeholder="Escribe para buscar..." />
-            <datalist id="servicios"></datalist>
-          </label>
-          <label id="servicioOtroWrapper" hidden>Otro servicio
-            <input name="servicio_otro" type="text" maxlength="80" />
-          </label>
-        </fieldset>
+    <form id="pedidoForm">
+      <input type="hidden" name="id" />
+      <fieldset>
+        <legend>Datos del contacto</legend>
+        <label>Teléfono propietario
+          <input name="telefono_propietario" type="tel" maxlength="20" required />
+        </label>
+        <label>Teléfono acudiente
+          <input name="telefono_acudiente" type="tel" maxlength="20" />
+        </label>
+        <label>Fecha y hora
+          <input name="fecha_hora" type="datetime-local" />
+        </label>
+      </fieldset>
 
-        <fieldset>
-          <legend>Precios y pago</legend>
-          <label>Precio base
-            <input name="precio" type="number" step="0.01" min="0" value="0" />
-            <div class="money" id="precioFmt"></div>
-          </label>
-          <label>Adicionales / Descuentos
-            <input name="adicionales_descuentos" type="number" step="0.01" value="0" />
-            <div class="money" id="adicionalesFmt"></div>
-          </label>
-          <label>Método de pago (busca y selecciona)
-            <input list="metodosPago" name="metodo_pago" id="metodoPagoSelect" placeholder="Escribe para buscar..." />
-            <datalist id="metodosPago"></datalist>
-          </label>
-          <div class="hint">El precio final se calcula automáticamente en el backend.</div>
-          <div>
-            <strong>Total estimado: </strong>
-            <span id="precioFinal" class="money">$0</span>
+      <fieldset>
+        <legend>Datos de la mascota y servicio</legend>
+        <label>Mascota
+          <select id="mascotaSelect" name="mascota_id">
+            <option value="">Nueva mascota / sin seleccionar</option>
+          </select>
+        </label>
+        <label>Nombre de la mascota
+          <input id="nombreMascota" name="nombre_mascota" type="text" maxlength="200" placeholder="Nombre" />
+        </label>
+
+        <label>Raza
+          <div class="searchable-select" id="razaWrapper">
+            <input type="text" id="razaSearch" class="searchable-input" placeholder="Escribe para buscar raza..." autocomplete="off" />
+            <input type="hidden" name="raza" id="razaValue" />
+            <div class="searchable-dropdown" id="razaDropdown"></div>
           </div>
-        </fieldset>
+        </label>
 
-        <fieldset>
-          <legend>Groomers</legend>
-          <label>Groomer 1 (busca y selecciona)
-            <input list="groomers" name="groomer1" id="groomer1Select" placeholder="Escribe para buscar..." />
-          </label>
-          <label>Groomer 2 (opcional)
-            <input list="groomers" name="groomer2" id="groomer2Select" placeholder="Escribe para buscar..." />
-          </label>
-          <datalist id="groomers"></datalist>
-        </fieldset>
+        <label>Tamaño
+          <select name="tamano" id="tamanoSelect">
+            <option value="">Seleccione...</option>
+            <option value="Minis">Minis</option>
+            <option value="Pequeños">Pequeños</option>
+            <option value="Medianos">Medianos</option>
+            <option value="Grandes">Grandes</option>
+            <option value="Gigantes">Gigantes</option>
+          </select>
+        </label>
+        <label>Pelaje
+          <select name="pelaje" id="pelajeSelect">
+            <option value="">Seleccione...</option>
+            <option value="Corto">Corto</option>
+            <option value="Medio">Medio</option>
+            <option value="Largo">Largo</option>
+          </select>
+        </label>
 
-        <div id="pedidoErrors" class="errors" aria-live="polite"></div>
-        <button type="submit">Guardar pedido</button>
-        <button type="button" onclick="history.back()">Volver atrás</button>
-      </form>
-    </main>
-    <script src="/pedido.js" defer></script>
-  </body>
-  </html>
+        <label>Servicio
+          <select name="servicio" id="servicioSelect">
+            <option value="">Seleccione...</option>
+            <option value="SanRoquero">SanRoquero</option>
+            <option value="Rockstar">Rockstar</option>
+            <option value="Superstar">Superstar</option>
+            <option value="Shanti Spa">Shanti Spa</option>
+            <option value="OTRO">Otro servicio</option>
+          </select>
+        </label>
+        <label id="servicioOtroWrapper" hidden>Otro servicio
+          <input name="servicio_otro" type="text" maxlength="80" placeholder="Describe el servicio..." />
+        </label>
+      </fieldset>
 
+      <fieldset>
+        <legend>Precios y pago</legend>
+        <div class="hint" id="precioSugerido" hidden></div>
+        <label>Precio base
+          <input name="precio" type="number" step="1" min="0" value="0" />
+          <div class="money" id="precioFmt"></div>
+        </label>
+        <label>Adicionales / Descuentos
+          <input name="adicionales_descuentos" type="number" step="1" value="0" />
+          <div class="money" id="adicionalesFmt"></div>
+        </label>
+        <label>Método de pago
+          <select name="metodo_pago" id="metodoPagoSelect">
+            <option value="">Seleccione...</option>
+            <option value="Billetera digital">Billetera digital</option>
+            <option value="Cortesía">Cortesía</option>
+            <option value="Efectivo">Efectivo</option>
+            <option value="Garantía">Garantía</option>
+            <option value="Promoción">Promoción</option>
+            <option value="Tarjeta crédito">Tarjeta crédito</option>
+            <option value="Tarjeta débito">Tarjeta débito</option>
+            <option value="Transferencia">Transferencia</option>
+          </select>
+        </label>
+        <div>
+          <strong>Total estimado: </strong>
+          <span id="precioFinal" class="money">$0</span>
+        </div>
+      </fieldset>
 
+      <fieldset>
+        <legend>Groomers</legend>
+        <label>Groomer 1
+          <select name="groomer1" id="groomer1Select">
+            <option value="">Seleccione...</option>
+          </select>
+        </label>
+        <label>Groomer 2 (opcional)
+          <select name="groomer2" id="groomer2Select">
+            <option value="">Seleccione...</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <label class="checkbox-label">
+        <input type="checkbox" name="acepta_terminos" id="aceptaTerminos" required />
+        <span>Acepta términos y condiciones de pedido</span>
+      </label>
+
+      <div id="pedidoErrors" class="errors" aria-live="polite"></div>
+      <button type="submit">Guardar pedido</button>
+      <button type="button" onclick="history.back()">Volver atrás</button>
+    </form>
+  </main>
+  <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
+  <script src="/pedido.js" defer></script>
+</body>
+</html>

@@ -1,33 +1,87 @@
 const express = require('express');
 const path = require('path');
+const session = require('express-session');
 require('./env');
+
 const {
-  insertCliente,
-  ping,
-  findClienteByTelefono,
-  updateCliente,
-  getRazasTamano,
-  findPedidosHoyPorTelefono,
-  insertPedido,
-  updatePedido,
-  getMascotasByTelefono,
-  replaceMascotasForTelefono,
-  upsertMascotaBasica,
-  cerrarPedido,
+  insertCliente, ping, findClienteByTelefono, updateCliente,
+  getRazasTamano, findPedidosHoyPorTelefono, insertPedido, updatePedido,
+  getMascotasByTelefono, replaceMascotasForTelefono, upsertMascotaBasica, cerrarPedido,
+  getPedidosCerradosPorFecha,
+  getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
 } = require('./db');
 const { sanitizeClienteInput, validateCliente, sanitizePedidoInput, validatePedido } = require('./types');
-
+const { findUserByUsername, verifyPassword, requireAuth, loginRateLimiter, recordFailedAttempt, clearAttempts } = require('./auth');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.set('trust proxy', 1);
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'sanroque-secret-key-change-me',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 8 * 60 * 60 * 1000,
+    httpOnly: true,
+    sameSite: 'lax',
+  },
+}));
+
+// --- Rutas públicas (login, assets) ---
+app.use('/img', express.static(path.join(__dirname, '..', 'public', 'img')));
+app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'login.html')));
+app.get('/login.css', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'login.css')));
+app.get('/login.js', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'login.js')));
+app.get('/styles.css', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'styles.css')));
+
+app.post('/api/login', loginRateLimiter, async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ ok: false, errors: ['Usuario y contraseña requeridos'] });
+    const user = await findUserByUsername(String(username).trim());
+    if (!user) {
+      recordFailedAttempt(req);
+      return res.status(401).json({ ok: false, errors: ['Credenciales inválidas'] });
+    }
+    if (user.activo === false) {
+      return res.status(403).json({ ok: false, errors: ['Tu cuenta ha sido desactivada. Contacta al administrador.'] });
+    }
+    const valid = await verifyPassword(password, user.password_hash);
+    if (!valid) {
+      recordFailedAttempt(req);
+      return res.status(401).json({ ok: false, errors: ['Credenciales inválidas'] });
+    }
+    clearAttempts(req);
+    req.session.userId = user.id;
+    req.session.username = user.username;
+    req.session.nombre = user.nombre;
+    res.json({ ok: true, nombre: user.nombre });
+  } catch (e) {
+    console.error('Login error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.post('/api/logout', (req, res) => {
+  req.session.destroy(() => res.json({ ok: true }));
+});
+
+app.get('/api/me', (req, res) => {
+  if (req.session && req.session.userId) {
+    return res.json({ ok: true, nombre: req.session.nombre, username: req.session.username });
+  }
+  res.status(401).json({ ok: false });
+});
+
+// --- Todo lo demás requiere autenticación ---
+app.use(requireAuth);
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-app.get('/health', (req, res) => {
-  res.json({ ok: true });
-});
+app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.get('/db-health', async (req, res) => {
   try {
@@ -39,7 +93,6 @@ app.get('/db-health', async (req, res) => {
   }
 });
 
-// Catálogos
 app.get('/api/catalogos/raza-tamano', async (req, res) => {
   try {
     const data = await getRazasTamano();
@@ -68,10 +121,7 @@ app.post('/api/clientes', async (req, res) => {
   try {
     const sanitized = sanitizeClienteInput(req.body);
     const errors = validateCliente(sanitized);
-    if (errors.length > 0) {
-      return res.status(400).json({ ok: false, errors });
-    }
-
+    if (errors.length > 0) return res.status(400).json({ ok: false, errors });
     const created = await insertCliente(sanitized);
     const mascotas = Array.isArray(req.body.mascotas) ? req.body.mascotas : [];
     if (sanitized.telefono_propietario && mascotas.length) {
@@ -79,17 +129,8 @@ app.post('/api/clientes', async (req, res) => {
     }
     res.status(201).json({ ok: true, id: created.id });
   } catch (err) {
-    // Log detallado en servidor para debug
-    console.error('Insert cliente error:', {
-      message: err && err.message,
-      code: err && err.code,
-      detail: err && err.detail,
-      constraint: err && err.constraint,
-    });
-    if (err && err.code === '23505') {
-      return res.status(409).json({ ok: false, errors: ['telefono_propietario ya existe'] });
-    }
-    console.error('Error creando cliente:', err);
+    console.error('Insert cliente error:', { message: err?.message, code: err?.code, detail: err?.detail, constraint: err?.constraint });
+    if (err?.code === '23505') return res.status(409).json({ ok: false, errors: ['telefono_propietario ya existe'] });
     res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
   }
 });
@@ -100,30 +141,18 @@ app.put('/api/clientes/:id', async (req, res) => {
     if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
     const sanitized = sanitizeClienteInput(req.body);
     const errors = validateCliente(sanitized);
-    if (errors.length > 0) {
-      return res.status(400).json({ ok: false, errors });
-    }
+    if (errors.length > 0) return res.status(400).json({ ok: false, errors });
     const updated = await updateCliente(id, sanitized);
     const mascotas = Array.isArray(req.body.mascotas) ? req.body.mascotas : [];
-    if (sanitized.telefono_propietario) {
-      await replaceMascotasForTelefono(sanitized.telefono_propietario, mascotas);
-    }
+    if (sanitized.telefono_propietario) await replaceMascotasForTelefono(sanitized.telefono_propietario, mascotas);
     res.json({ ok: true, id: updated.id });
   } catch (err) {
-    console.error('Update cliente error:', {
-      message: err && err.message,
-      code: err && err.code,
-      detail: err && err.detail,
-      constraint: err && err.constraint,
-    });
-    if (err && err.code === '23505') {
-      return res.status(409).json({ ok: false, errors: ['telefono_propietario ya existe'] });
-    }
+    console.error('Update cliente error:', { message: err?.message, code: err?.code, detail: err?.detail, constraint: err?.constraint });
+    if (err?.code === '23505') return res.status(409).json({ ok: false, errors: ['telefono_propietario ya existe'] });
     res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
   }
 });
 
-// -------- Pedidos --------
 app.get('/api/pedidos', async (req, res) => {
   try {
     const tel = String(req.query.telefono || '').trim();
@@ -141,22 +170,15 @@ app.post('/api/pedidos', async (req, res) => {
     const sanitized = sanitizePedidoInput(req.body);
     const errors = validatePedido(sanitized);
     if (errors.length > 0) return res.status(400).json({ ok: false, errors });
-    // Asegurar mascota en tabla mascotas
     if (sanitized.telefono_propietario && sanitized.nombre_mascota) {
       const m = await upsertMascotaBasica({
         telefono_propietario: sanitized.telefono_propietario,
-        mascota_id: sanitized.mascota_id,
-        nombre_mascota: sanitized.nombre_mascota,
-        raza: sanitized.raza,
-        tamano: sanitized.tamano,
-        pelaje: sanitized.pelaje,
+        mascota_id: sanitized.mascota_id, nombre_mascota: sanitized.nombre_mascota,
+        raza: sanitized.raza, tamano: sanitized.tamano, pelaje: sanitized.pelaje,
       });
       if (m) {
-        sanitized.mascota_id = m.id;
-        sanitized.nombre_mascota = m.nombre_mascota;
-        sanitized.raza = sanitized.raza || m.raza;
-        sanitized.tamano = sanitized.tamano || m.tamano;
-        sanitized.pelaje = sanitized.pelaje || m.pelaje;
+        sanitized.mascota_id = m.id; sanitized.nombre_mascota = m.nombre_mascota;
+        sanitized.raza = sanitized.raza || m.raza; sanitized.tamano = sanitized.tamano || m.tamano; sanitized.pelaje = sanitized.pelaje || m.pelaje;
       }
     }
     const created = await insertPedido(sanitized);
@@ -177,18 +199,12 @@ app.put('/api/pedidos/:id', async (req, res) => {
     if (sanitized.telefono_propietario && sanitized.nombre_mascota) {
       const m = await upsertMascotaBasica({
         telefono_propietario: sanitized.telefono_propietario,
-        mascota_id: sanitized.mascota_id,
-        nombre_mascota: sanitized.nombre_mascota,
-        raza: sanitized.raza,
-        tamano: sanitized.tamano,
-        pelaje: sanitized.pelaje,
+        mascota_id: sanitized.mascota_id, nombre_mascota: sanitized.nombre_mascota,
+        raza: sanitized.raza, tamano: sanitized.tamano, pelaje: sanitized.pelaje,
       });
       if (m) {
-        sanitized.mascota_id = m.id;
-        sanitized.nombre_mascota = m.nombre_mascota;
-        sanitized.raza = sanitized.raza || m.raza;
-        sanitized.tamano = sanitized.tamano || m.tamano;
-        sanitized.pelaje = sanitized.pelaje || m.pelaje;
+        sanitized.mascota_id = m.id; sanitized.nombre_mascota = m.nombre_mascota;
+        sanitized.raza = sanitized.raza || m.raza; sanitized.tamano = sanitized.tamano || m.tamano; sanitized.pelaje = sanitized.pelaje || m.pelaje;
       }
     }
     const updated = await updatePedido(id, sanitized);
@@ -199,7 +215,6 @@ app.put('/api/pedidos/:id', async (req, res) => {
   }
 });
 
-// Mascotas para pedidos
 app.get('/api/mascotas', async (req, res) => {
   try {
     const tel = String(req.query.telefono || '').trim();
@@ -212,7 +227,6 @@ app.get('/api/mascotas', async (req, res) => {
   }
 });
 
-// Cerrar pedido
 app.post('/api/pedidos/:id/cerrar', async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -226,8 +240,87 @@ app.post('/api/pedidos/:id/cerrar', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor iniciado en http://localhost:${PORT}`);
+// -------- Dashboard --------
+app.get('/api/dashboard/pedidos-cerrados', async (req, res) => {
+  try {
+    const desde = req.query.desde;
+    const hasta = req.query.hasta;
+    if (!desde || !hasta) return res.status(400).json({ ok: false, errors: ['desde y hasta son requeridos'] });
+    const rows = await getPedidosCerradosPorFecha(desde, hasta);
+    res.json({ ok: true, data: rows });
+  } catch (e) {
+    console.error('Dashboard error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
 });
 
+// -------- Groomers --------
+app.get('/api/groomers', async (req, res) => {
+  try {
+    const rows = await getAllGroomers();
+    res.json({ ok: true, data: rows });
+  } catch (e) {
+    console.error('Get groomers error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
 
+app.get('/api/groomers/activos', async (req, res) => {
+  try {
+    const rows = await getActiveGroomers();
+    res.json({ ok: true, data: rows });
+  } catch (e) {
+    console.error('Get active groomers error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.post('/api/groomers', async (req, res) => {
+  try {
+    const { documento, nombre, apellido } = req.body;
+    if (!documento || !nombre || !apellido) {
+      return res.status(400).json({ ok: false, errors: ['Documento, nombre y apellido son requeridos'] });
+    }
+    const created = await insertGroomer({ documento: String(documento).trim(), nombre: String(nombre).trim(), apellido: String(apellido).trim() });
+    res.status(201).json({ ok: true, data: created });
+  } catch (e) {
+    if (e.code === '23505') return res.status(409).json({ ok: false, errors: ['Ya existe un groomer con ese documento'] });
+    console.error('Insert groomer error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.put('/api/groomers/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
+    const { documento, nombre, apellido } = req.body;
+    if (!documento || !nombre || !apellido) {
+      return res.status(400).json({ ok: false, errors: ['Documento, nombre y apellido son requeridos'] });
+    }
+    const updated = await updateGroomer(id, { documento: String(documento).trim(), nombre: String(nombre).trim(), apellido: String(apellido).trim() });
+    if (!updated) return res.status(404).json({ ok: false, errors: ['Groomer no encontrado'] });
+    res.json({ ok: true, data: updated });
+  } catch (e) {
+    if (e.code === '23505') return res.status(409).json({ ok: false, errors: ['Ya existe un groomer con ese documento'] });
+    console.error('Update groomer error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.patch('/api/groomers/:id/toggle', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
+    const { activo } = req.body;
+    if (typeof activo !== 'boolean') return res.status(400).json({ ok: false, errors: ['activo debe ser true o false'] });
+    const updated = await toggleGroomerActivo(id, activo);
+    if (!updated) return res.status(404).json({ ok: false, errors: ['Groomer no encontrado'] });
+    res.json({ ok: true, data: updated });
+  } catch (e) {
+    console.error('Toggle groomer error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.listen(PORT, () => console.log(`Servidor iniciado en http://localhost:${PORT}`));

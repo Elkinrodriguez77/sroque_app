@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Equipo Groomer - San Roque</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-left">
+      <img src="/img/logo_san_roque.png" alt="San Roque" />
+      <span class="app-title">San Roque</span>
+      <nav>
+        <a href="/">Clientes</a>
+        <a href="/pedido.html">Pedidos</a>
+        <a href="/groomers.html" class="active">Equipo</a>
+        <a href="/dashboard.html">Dashboard</a>
+      </nav>
+    </div>
+    <div class="app-header-right">
+      <span class="user-badge" id="userBadge"></span>
+      <button class="btn-logout" id="btnLogout">Salir</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>Equipo Groomer</h1>
+
+    <fieldset>
+      <legend id="formLegend">Registrar nuevo groomer</legend>
+      <form id="groomerForm">
+        <input type="hidden" name="id" />
+        <label>Documento de identidad
+          <input name="documento" type="text" maxlength="30" required placeholder="Ej: 1234567890" />
+        </label>
+        <label>Nombre
+          <input name="nombre" type="text" maxlength="100" required placeholder="Nombre" />
+        </label>
+        <label>Apellido
+          <input name="apellido" type="text" maxlength="100" required placeholder="Apellido" />
+        </label>
+        <div id="groomerErrors" class="errors" aria-live="polite"></div>
+        <div style="display:flex; gap:8px;">
+          <button type="submit" id="btnSubmit">Guardar groomer</button>
+          <button type="button" id="btnCancel" hidden>Cancelar</button>
+        </div>
+      </form>
+    </fieldset>
+
+    <fieldset>
+      <legend>Groomers registrados</legend>
+      <div id="groomerList"></div>
+    </fieldset>
+  </main>
+
+  <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
+  <script src="/groomers.js" defer></script>
+</body>
+</html>

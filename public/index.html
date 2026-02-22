@@ -1,93 +1,112 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Registro de Clientes - San Roque</title>
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body>
-    <main class="container">
-      <h1>Registro de Clientes</h1>
-      <section id="searchSection">
-        <fieldset>
-          <legend>Buscar cliente por teléfono</legend>
-          <label>Teléfono propietario
-            <input id="buscarTelefono" type="tel" maxlength="20" />
-          </label>
-          <button id="btnBuscar" type="button">Buscar</button>
-          <div id="lookupMsg" class="errors" aria-live="polite"></div>
-          <div id="lookupOptions" hidden>
-            <p>Cliente encontrado.</p>
-            <button id="btnPedido" type="button">Registrar pedido / servicio</button>
-            <button id="btnActualizar" type="button">Actualizar datos</button>
-          </div>
-        </fieldset>
-      </section>
-      <form id="clienteForm" hidden>
-        <input type="hidden" name="id" />
-        <fieldset>
-          <legend>Datos obligatorios</legend>
-          <label>
-            ¿Es propietario?
-            <select name="es_propietario" required>
-              <option value="">Seleccione...</option>
-              <option value="true">Sí</option>
-              <option value="false">No</option>
-            </select>
-          </label>
-          <label>
-            Nombre propietario
-            <input name="nombre_propietario" type="text" maxlength="200" required />
-          </label>
-          <label>
-            Teléfono propietario
-            <input name="telefono_propietario" type="tel" maxlength="20" required />
-          </label>
-          <label id="acudienteWrapper">
-            Nombre acudiente
-            <input name="nombre_acudiente" type="text" maxlength="200" />
-            Teléfono acudiente
-            <input name="telefono_acudiente" type="tel" maxlength="20" />
-          </label>
-          <label>
-            Autorización tratamiento de datos
-            <select name="autorizacion_tratamiento_datos" required>
-              <option value="">Seleccione...</option>
-              <option value="true">Autorizo</option>
-              <option value="false">No autorizo</option>
-            </select>
-          </label>
-        </fieldset>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Registro de Clientes - San Roque</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-left">
+      <img src="/img/logo_san_roque.png" alt="San Roque" />
+      <span class="app-title">San Roque</span>
+      <nav>
+        <a href="/" class="active">Clientes</a>
+        <a href="/pedido.html">Pedidos</a>
+        <a href="/groomers.html">Equipo</a>
+        <a href="/dashboard.html">Dashboard</a>
+      </nav>
+    </div>
+    <div class="app-header-right">
+      <span class="user-badge" id="userBadge"></span>
+      <button class="btn-logout" id="btnLogout">Salir</button>
+    </div>
+  </header>
 
-        <fieldset>
-          <legend>Datos SanRoquero</legend>
-          <label>Email
-            <input name="email" type="email" maxlength="255" />
-          </label>
-          <label>Perfil Instagram
-            <input name="perfil_instagram" type="text" maxlength="50" />
-          </label>
-          <label>Dirección
-            <input name="direccion" type="text" maxlength="100" />
-          </label>
-          <div id="mascotasSection">
-            <h3>Mascotas</h3>
-            <p>Puedes registrar varias mascotas para este cliente.</p>
-            <div id="mascotasContainer"></div>
-            <button type="button" id="btnAddMascota">Añadir mascota</button>
-          </div>
-        </fieldset>
+  <main class="container">
+    <h1>Registro de Clientes</h1>
+    <section id="searchSection">
+      <fieldset>
+        <legend>Buscar cliente por teléfono</legend>
+        <label>Teléfono propietario
+          <input id="buscarTelefono" type="tel" maxlength="20" placeholder="Ej: 3001234567" />
+        </label>
+        <button id="btnBuscar" type="button" class="btn-primary">Buscar</button>
+        <div id="lookupMsg" class="errors" aria-live="polite"></div>
+        <div id="lookupOptions" hidden>
+          <p>Cliente encontrado.</p>
+          <button id="btnPedido" type="button">Registrar pedido / servicio</button>
+          <button id="btnActualizar" type="button">Actualizar datos</button>
+        </div>
+      </fieldset>
+    </section>
 
-        <div id="formErrors" class="errors" aria-live="polite"></div>
+    <form id="clienteForm" hidden>
+      <input type="hidden" name="id" />
+      <fieldset>
+        <legend>Datos obligatorios</legend>
+        <label>
+          ¿Es propietario?
+          <select name="es_propietario" required>
+            <option value="">Seleccione...</option>
+            <option value="true">Sí</option>
+            <option value="false">No</option>
+          </select>
+        </label>
+        <label>
+          Nombre propietario
+          <input name="nombre_propietario" type="text" maxlength="200" required placeholder="Nombre completo" />
+        </label>
+        <label>
+          Teléfono propietario
+          <input name="telefono_propietario" type="tel" maxlength="20" required />
+        </label>
+        <label id="acudienteWrapper">
+          Nombre acudiente
+          <input name="nombre_acudiente" type="text" maxlength="200" placeholder="Nombre del acudiente" />
+          Teléfono acudiente
+          <input name="telefono_acudiente" type="tel" maxlength="20" />
+        </label>
+        <label>
+          Autorización tratamiento de datos
+          <select name="autorizacion_tratamiento_datos" required>
+            <option value="">Seleccione...</option>
+            <option value="true">Autorizo</option>
+            <option value="false">No autorizo</option>
+          </select>
+        </label>
+      </fieldset>
 
-        <button type="submit">Guardar</button>
-      </form>
-      <div id="success" class="success" hidden>¡Cliente registrado correctamente!</div>
-    </main>
+      <fieldset>
+        <legend>Datos SanRoquero</legend>
+        <label>Email
+          <input name="email" type="email" maxlength="255" placeholder="correo@ejemplo.com" />
+        </label>
+        <label>Perfil Instagram
+          <input name="perfil_instagram" type="text" maxlength="50" placeholder="@usuario" />
+        </label>
+        <label>Dirección
+          <input name="direccion" type="text" maxlength="100" />
+        </label>
+        <div id="mascotasSection">
+          <h3>Mascotas</h3>
+          <p>Puedes registrar varias mascotas para este cliente.</p>
+          <div id="mascotasContainer"></div>
+          <button type="button" id="btnAddMascota">Añadir mascota</button>
+        </div>
+      </fieldset>
 
-    <script src="/main.js" defer></script>
-  </body>
-  </html>
+      <div id="formErrors" class="errors" aria-live="polite"></div>
+      <button type="submit">Guardar</button>
+    </form>
+    <div id="success" class="success" hidden>¡Cliente registrado correctamente!</div>
+  </main>
 
-
+  <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
+  <script src="/main.js" defer></script>
+</body>
+</html>
