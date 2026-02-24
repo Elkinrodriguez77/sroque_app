@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Servicios por mascota - San Roque</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-left">
+      <img src="/img/logo_san_roque.png" alt="San Roque" />
+      <span class="app-title">San Roque</span>
+      <nav>
+        <a href="/">Clientes</a>
+        <a href="/pedido.html">Pedidos</a>
+        <a href="/groomers.html">Equipo</a>
+        <a href="/dashboard.html">Dashboard</a>
+        <a href="/servicios.html" class="active">Servicios</a>
+      </nav>
+    </div>
+    <div class="app-header-right">
+      <span class="user-badge" id="userBadge"></span>
+      <button class="btn-logout" id="btnLogout">Salir</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>Historial de servicios por mascota</h1>
+
+    <fieldset>
+      <legend>Buscar por nombre de mascota</legend>
+      <p class="hint">Escribe el nombre (ej: Toby, Tobby). Si hay varias mascotas con nombres similares, selecciona la correcta según el propietario.</p>
+      <div class="dash-filters">
+        <label>Nombre mascota
+          <input type="text" id="nombreMascota" placeholder="Ej: Toby" maxlength="200" />
+        </label>
+        <button type="button" id="btnBuscar" class="btn-primary">Buscar</button>
+      </div>
+      <div id="serviciosMsg" class="pedidos-msg" aria-live="polite"></div>
+    </fieldset>
+
+    <div id="mascotasList" hidden>
+      <fieldset>
+        <legend>Mascotas encontradas — selecciona una</legend>
+        <ul id="mascotasUl" class="mascotas-select-list"></ul>
+      </fieldset>
+    </div>
+
+    <div id="pedidosList" hidden>
+      <fieldset>
+        <legend id="pedidosLegend">Servicios realizados</legend>
+        <div class="dash-table-wrap">
+          <table class="dash-table">
+            <thead>
+              <tr>
+                <th>Fecha/Hora</th>
+                <th>Servicio</th>
+                <th>Groomer</th>
+              </tr>
+            </thead>
+            <tbody id="serviciosBody"></tbody>
+          </table>
+        </div>
+        <p id="sinServicios" class="hint" hidden>No hay servicios registrados para esta mascota.</p>
+      </fieldset>
+    </div>
+  </main>
+
+  <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
+  <script src="/servicios.js" defer></script>
+</body>
+</html>

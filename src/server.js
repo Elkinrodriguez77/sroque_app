@@ -7,7 +7,8 @@ const {
   insertCliente, ping, findClienteByTelefono, updateCliente,
   getRazasTamano, findPedidosHoyPorTelefono, insertPedido, updatePedido,
   getMascotasByTelefono, replaceMascotasForTelefono, upsertMascotaBasica, cerrarPedido,
-  getPedidosCerradosPorFecha,
+  getPedidosPorFecha,
+  searchMascotasByNombre, getPedidosPorMascota,
   getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
 } = require('./db');
 const { sanitizeClienteInput, validateCliente, sanitizePedidoInput, validatePedido } = require('./types');
@@ -241,15 +242,41 @@ app.post('/api/pedidos/:id/cerrar', async (req, res) => {
 });
 
 // -------- Dashboard --------
-app.get('/api/dashboard/pedidos-cerrados', async (req, res) => {
+app.get('/api/dashboard/pedidos', async (req, res) => {
   try {
     const desde = req.query.desde;
     const hasta = req.query.hasta;
+    const estado = req.query.estado || 'cerrados'; // cerrados | abiertos | todos
     if (!desde || !hasta) return res.status(400).json({ ok: false, errors: ['desde y hasta son requeridos'] });
-    const rows = await getPedidosCerradosPorFecha(desde, hasta);
+    const rows = await getPedidosPorFecha(desde, hasta, estado);
     res.json({ ok: true, data: rows });
   } catch (e) {
     console.error('Dashboard error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+// -------- Servicios (historial por mascota) --------
+app.get('/api/servicios/buscar-mascotas', async (req, res) => {
+  try {
+    const nombre = req.query.nombre;
+    if (!nombre || !String(nombre).trim()) return res.status(400).json({ ok: false, errors: ['nombre es requerido'] });
+    const rows = await searchMascotasByNombre(nombre);
+    res.json({ ok: true, data: rows });
+  } catch (e) {
+    console.error('Buscar mascotas error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.get('/api/servicios/pedidos/:mascotaId', async (req, res) => {
+  try {
+    const mascotaId = Number(req.params.mascotaId);
+    if (!mascotaId) return res.status(400).json({ ok: false, errors: ['mascota_id inválido'] });
+    const rows = await getPedidosPorMascota(mascotaId);
+    res.json({ ok: true, data: rows });
+  } catch (e) {
+    console.error('Pedidos por mascota error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno'] });
   }
 });

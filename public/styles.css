@@ -79,6 +79,7 @@ button[type="button"]:hover { background: #4b5563; color: #f9fafb; }
 .errors { color: #f87171; font-size: 0.85rem; }
 .success { color: #34d399; margin-top: 12px; font-weight: 500; }
 .hint { font-size: 0.85rem; color: #9ca3af; }
+.pedidos-msg { font-size: 0.85rem; color: #d1d5db; margin: 6px 0; }
 .highlight-required { background: rgba(251, 191, 36, 0.12) !important; border-color: #f59e0b !important; }
 
 /* ---- Money ---- */
@@ -197,10 +198,32 @@ button[type="button"]:hover { background: #4b5563; color: #f9fafb; }
 .dash-stat-value { font-size: 1.3rem; font-weight: 700; color: #f9fafb; }
 .dash-stat-detail { font-size: 0.85rem; font-weight: 500; color: #a5b4fc; }
 
-.dash-table-wrap { overflow-x: auto; }
-.dash-table {
-  width: 100%; border-collapse: collapse; font-size: 0.85rem;
+.container.dash-main { padding-left: 8px; padding-right: 8px; }
+.dash-results {
+  margin: 0; padding: 0; border: 1px solid #374151; border-radius: 12px;
+  background: #1f2937; overflow: hidden;
 }
+.dash-tabs {
+  display: flex; gap: 0; border-bottom: 1px solid #374151; padding: 0 4px;
+}
+.dash-tab {
+  padding: 12px 20px; background: transparent; border: none; border-bottom: 3px solid transparent;
+  color: #9ca3af; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+  font-family: 'Montserrat', system-ui, sans-serif; transition: all 0.2s;
+}
+.dash-tab:hover { color: #e5e7eb; }
+.dash-tab.active { color: #a5b4fc; border-bottom-color: #6366f1; }
+.dash-tab-panel {
+  padding: 12px 4px 12px 4px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.dash-table-wrap {
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  margin: 0; min-width: 0;
+}
+.dash-table {
+  width: 100%; min-width: 700px; border-collapse: collapse; font-size: 0.85rem;
+}
+.dash-table-pagos { min-width: 280px; }
 .dash-table th {
   text-align: left; padding: 10px 8px; font-weight: 600; color: #a5b4fc;
   border-bottom: 2px solid #374151; white-space: nowrap;
@@ -233,6 +256,55 @@ button[type="button"]:hover { background: #4b5563; color: #f9fafb; }
   28% { transform: scale(1); }
   42% { transform: scale(1.2); }
   56% { transform: scale(1); }
+}
+
+/* ---- Info button & popup ---- */
+.info-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(99,102,241,0.2); color: #a5b4fc;
+  border: 1px solid rgba(99,102,241,0.4);
+  font-size: 0.75rem; font-weight: 700; cursor: pointer;
+  padding: 0; vertical-align: middle; margin-left: 6px;
+  transition: all 0.2s; line-height: 1;
+}
+.info-btn:hover { background: rgba(99,102,241,0.4); color: #fff; }
+.info-popup {
+  background: #1e293b; border: 1px solid #475569; border-radius: 10px;
+  padding: 12px 16px; font-size: 0.85rem; color: #cbd5e1;
+  margin: 4px 0 8px;
+}
+.info-popup ul { padding-left: 18px; margin: 6px 0; }
+.info-popup li { margin: 4px 0; }
+.info-popup small { color: #94a3b8; }
+
+/* ---- Mixto payment ---- */
+#mixtoWrapper {
+  border: 1px dashed #4b5563; border-radius: 10px; padding: 14px;
+  margin: 6px 0; background: rgba(99,102,241,0.04);
+}
+.mixto-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin-bottom: 8px;
+}
+@media (max-width: 500px) { .mixto-row { grid-template-columns: 1fr; } }
+
+/* ---- Servicios: lista de mascotas para seleccionar ---- */
+.mascotas-select-list {
+  list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px;
+}
+.mascotas-select-list li {
+  border: 1px solid #374151; border-radius: 10px; padding: 12px 14px;
+  background: #1a2332; cursor: pointer; transition: all 0.2s;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+}
+.mascotas-select-list li:hover { border-color: #6366f1; background: rgba(99,102,241,0.08); }
+.mascotas-select-list li .mascota-nombre { font-weight: 600; color: #e5e7eb; }
+.mascotas-select-list li .mascota-prop { font-size: 0.85rem; color: #9ca3af; }
+.mascotas-select-list li .mascota-tel { font-size: 0.8rem; color: #6b7280; }
+.mascotas-select-list li .mascota-tel-key {
+  color: #a5b4fc; font-weight: 600; background: rgba(99,102,241,0.15);
+  padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(99,102,241,0.3);
 }
 
 /* ---- Responsive ---- */

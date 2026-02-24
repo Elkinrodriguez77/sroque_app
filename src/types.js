@@ -73,10 +73,15 @@ function sanitizePedidoInput(input) {
       fechaISO = d.toISOString();
     }
   }
+
+  const metodo = input.metodo_pago ? String(input.metodo_pago).trim() : undefined;
+  const isMixto = metodo === 'Mixto';
+
   return {
     telefono_propietario: input.telefono_propietario ? String(input.telefono_propietario).trim() : '',
     telefono_acudiente: input.telefono_acudiente ? String(input.telefono_acudiente).trim() : undefined,
     fecha_hora: fechaISO,
+    piso: input.piso ? String(input.piso).trim() : undefined,
     raza: input.raza ? String(input.raza).trim() : undefined,
     tamano: input.tamano ? String(input.tamano).trim() : undefined,
     pelaje: input.pelaje ? String(input.pelaje).trim() : undefined,
@@ -85,7 +90,11 @@ function sanitizePedidoInput(input) {
     nombre_mascota: input.nombre_mascota ? String(input.nombre_mascota).trim() : undefined,
     precio: toNumberOrZero(input.precio),
     adicionales_descuentos: toNumberOrZero(input.adicionales_descuentos),
-    metodo_pago: input.metodo_pago ? String(input.metodo_pago).trim() : undefined,
+    metodo_pago: metodo,
+    metodo_pago_1: isMixto && input.metodo_pago_1 ? String(input.metodo_pago_1).trim() : null,
+    metodo_pago_2: isMixto && input.metodo_pago_2 ? String(input.metodo_pago_2).trim() : null,
+    monto_pago_1: isMixto ? toNumberOrZero(input.monto_pago_1) : null,
+    monto_pago_2: isMixto ? toNumberOrZero(input.monto_pago_2) : null,
     groomer1: input.groomer1 ? String(input.groomer1).trim() : undefined,
     groomer2: input.groomer2 ? String(input.groomer2).trim() : undefined,
   };

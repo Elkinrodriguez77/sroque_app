@@ -19,6 +19,7 @@
         <a href="/pedido.html">Pedidos</a>
         <a href="/groomers.html">Equipo</a>
         <a href="/dashboard.html" class="active">Dashboard</a>
+        <a href="/servicios.html">Servicios</a>
       </nav>
     </div>
     <div class="app-header-right">
@@ -27,11 +28,11 @@
     </div>
   </header>
 
-  <main class="container">
-    <h1>Dashboard - Servicios cerrados</h1>
+  <main class="container dash-main">
+    <h1>Dashboard</h1>
 
     <fieldset>
-      <legend>Filtrar por fecha</legend>
+      <legend>Filtrar</legend>
       <div class="dash-filters">
         <label>Desde
           <input type="date" id="fechaDesde" />
@@ -39,35 +40,63 @@
         <label>Hasta
           <input type="date" id="fechaHasta" />
         </label>
+        <label>Estado
+          <select id="filtroEstado">
+            <option value="cerrados">Cerrados</option>
+            <option value="abiertos">Abiertos</option>
+            <option value="todos">Todos</option>
+          </select>
+        </label>
         <button type="button" id="btnConsultar" class="btn-primary">Consultar</button>
       </div>
     </fieldset>
 
     <div id="dashSummary" class="dash-summary" hidden></div>
 
-    <fieldset id="dashResults" hidden>
-      <legend>Resultados</legend>
-      <div class="dash-table-wrap">
-        <table class="dash-table">
-          <thead>
-            <tr>
-              <th>Fecha/Hora</th>
-              <th>Mascota</th>
-              <th>Servicio</th>
-              <th>Tamaño</th>
-              <th>Pelaje</th>
-              <th>Precio</th>
-              <th>Adic/Desc</th>
-              <th>Total</th>
-              <th>Pago</th>
-              <th>Groomer(s)</th>
-              <th>Teléfono</th>
-            </tr>
-          </thead>
-          <tbody id="dashBody"></tbody>
-        </table>
+    <div id="dashResults" class="dash-results" hidden>
+      <div class="dash-tabs">
+        <button type="button" class="dash-tab active" data-tab="pedidos">Pedidos</button>
+        <button type="button" class="dash-tab" data-tab="pagos">Pagos por medio</button>
       </div>
-    </fieldset>
+      <div id="dashTabPedidos" class="dash-tab-panel">
+        <div class="dash-table-wrap">
+          <table class="dash-table">
+            <thead>
+              <tr>
+                <th>Fecha/Hora</th>
+                <th>Propietario</th>
+                <th>Mascota</th>
+                <th>Servicio</th>
+                <th>Piso</th>
+                <th>Tamaño</th>
+                <th>Pelaje</th>
+                <th>Precio</th>
+                <th>Adic/Desc</th>
+                <th>Total</th>
+                <th>Pago</th>
+                <th>Groomer(s)</th>
+                <th>Teléfono</th>
+              </tr>
+            </thead>
+            <tbody id="dashBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="dashTabPagos" class="dash-tab-panel" hidden>
+        <div class="dash-table-wrap">
+          <table class="dash-table dash-table-pagos">
+            <thead>
+              <tr>
+                <th>Medio de pago</th>
+                <th>Pedidos</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="dashPagosBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
     <div id="dashMsg" class="errors" aria-live="polite"></div>
   </main>

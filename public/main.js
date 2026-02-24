@@ -108,14 +108,13 @@ btnBuscar.addEventListener('click', buscarCliente);
 
 btnPedido.addEventListener('click', () => {
   const c = window._clienteEncontrado || {};
-  try {
-    const prefill = {
-      telefono_propietario: c.telefono_propietario || document.getElementById('buscarTelefono').value || '',
-      telefono_acudiente: c.telefono_acudiente || ''
-    };
-    localStorage.setItem('pedido_prefill', JSON.stringify(prefill));
-  } catch {}
-  window.location.href = '/pedido.html';
+  const telProp = c.telefono_propietario || document.getElementById('buscarTelefono').value || '';
+  const telAcud = c.telefono_acudiente || '';
+  const params = new URLSearchParams();
+  if (telProp) params.set('tel_prop', telProp);
+  if (telAcud) params.set('tel_acud', telAcud);
+  const qs = params.toString();
+  window.location.href = qs ? `/pedido.html?${qs}` : '/pedido.html';
 });
 
 btnActualizar.addEventListener('click', () => {

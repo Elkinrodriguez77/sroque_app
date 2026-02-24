@@ -117,6 +117,7 @@ async function insertPedido(pedido) {
       telefono_propietario,
       telefono_acudiente,
       fecha_hora,
+      piso,
       raza,
       tamano,
       pelaje,
@@ -124,18 +125,23 @@ async function insertPedido(pedido) {
       precio,
       adicionales_descuentos,
       metodo_pago,
+      metodo_pago_1,
+      metodo_pago_2,
+      monto_pago_1,
+      monto_pago_2,
       groomer1,
       groomer2,
       mascota_id,
       nombre_mascota
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19
     ) RETURNING id;
   `;
   const values = [
     pedido.telefono_propietario,
     pedido.telefono_acudiente || null,
     pedido.fecha_hora,
+    pedido.piso || null,
     pedido.raza || null,
     pedido.tamano || null,
     pedido.pelaje || null,
@@ -143,6 +149,10 @@ async function insertPedido(pedido) {
     pedido.precio || 0,
     pedido.adicionales_descuentos || 0,
     pedido.metodo_pago || null,
+    pedido.metodo_pago_1 || null,
+    pedido.metodo_pago_2 || null,
+    pedido.monto_pago_1 || null,
+    pedido.monto_pago_2 || null,
     pedido.groomer1 || null,
     pedido.groomer2 || null,
     pedido.mascota_id || null,
@@ -159,24 +169,30 @@ async function updatePedido(id, pedido) {
       telefono_propietario = $1,
       telefono_acudiente = $2,
       fecha_hora = $3,
-      raza = $4,
-      tamano = $5,
-      pelaje = $6,
-      servicio = $7,
-      precio = $8,
-      adicionales_descuentos = $9,
-      metodo_pago = $10,
-      groomer1 = $11,
-      groomer2 = $12,
-      mascota_id = $13,
-      nombre_mascota = $14
-    WHERE id = $15
+      piso = $4,
+      raza = $5,
+      tamano = $6,
+      pelaje = $7,
+      servicio = $8,
+      precio = $9,
+      adicionales_descuentos = $10,
+      metodo_pago = $11,
+      metodo_pago_1 = $12,
+      metodo_pago_2 = $13,
+      monto_pago_1 = $14,
+      monto_pago_2 = $15,
+      groomer1 = $16,
+      groomer2 = $17,
+      mascota_id = $18,
+      nombre_mascota = $19
+    WHERE id = $20
     RETURNING id;
   `;
   const values = [
     pedido.telefono_propietario,
     pedido.telefono_acudiente || null,
     pedido.fecha_hora,
+    pedido.piso || null,
     pedido.raza || null,
     pedido.tamano || null,
     pedido.pelaje || null,
@@ -184,6 +200,10 @@ async function updatePedido(id, pedido) {
     pedido.precio || 0,
     pedido.adicionales_descuentos || 0,
     pedido.metodo_pago || null,
+    pedido.metodo_pago_1 || null,
+    pedido.metodo_pago_2 || null,
+    pedido.monto_pago_1 || null,
+    pedido.monto_pago_2 || null,
     pedido.groomer1 || null,
     pedido.groomer2 || null,
     pedido.mascota_id || null,
@@ -401,20 +421,30 @@ async function upsertMascotaBasica({ telefono_propietario, mascota_id, nombre_ma
 }
 
 // ----- Dashboard -----
-async function getPedidosCerradosPorFecha(fechaDesde, fechaHasta) {
+async function getPedidosPorFecha(fechaDesde, fechaHasta, estado) {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  let cerradoFilter = '';
+  const params = [fechaDesde, fechaHasta];
+  if (estado === 'cerrados') {
+    cerradoFilter = ' AND COALESCE(p.cerrado, false) = true';
+  } else if (estado === 'abiertos') {
+    cerradoFilter = ' AND COALESCE(p.cerrado, false) = false';
+  }
   const { rows } = await pool.query(
-    `SELECT id, telefono_propietario, telefono_acudiente, fecha_hora,
-            nombre_mascota, raza, tamano, pelaje, servicio,
-            precio, adicionales_descuentos,
-            (COALESCE(precio,0) + COALESCE(adicionales_descuentos,0)) AS precio_final,
-            metodo_pago, groomer1, groomer2
-     FROM ${schema}.pedidos
-     WHERE cerrado = true
-       AND (fecha_hora AT TIME ZONE 'America/Bogota')::date >= $1::date
-       AND (fecha_hora AT TIME ZONE 'America/Bogota')::date <= $2::date
-     ORDER BY fecha_hora DESC`,
-    [fechaDesde, fechaHasta]
+    `SELECT p.id, p.telefono_propietario, p.telefono_acudiente, p.fecha_hora, p.piso,
+            p.nombre_mascota, p.raza, p.tamano, p.pelaje, p.servicio,
+            p.precio, p.adicionales_descuentos,
+            (COALESCE(p.precio,0) + COALESCE(p.adicionales_descuentos,0)) AS precio_final,
+            p.metodo_pago, p.metodo_pago_1, p.metodo_pago_2, p.monto_pago_1, p.monto_pago_2,
+            p.groomer1, p.groomer2, p.cerrado,
+            c.nombre_propietario
+     FROM ${schema}.pedidos p
+     LEFT JOIN ${schema}.clientes c ON c.telefono_propietario = p.telefono_propietario
+     WHERE (p.fecha_hora AT TIME ZONE 'America/Bogota')::date >= $1::date
+       AND (p.fecha_hora AT TIME ZONE 'America/Bogota')::date <= $2::date
+       ${cerradoFilter}
+     ORDER BY p.fecha_hora DESC`,
+    params
   );
   return rows;
 }
@@ -463,13 +493,50 @@ async function toggleGroomerActivo(id, activo) {
   return rows[0] || null;
 }
 
+// ----- Servicios: buscar mascotas por nombre (coincidencias) -----
+async function searchMascotasByNombre(nombre) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const term = `%${String(nombre || '').trim()}%`;
+  if (term === '%%') return [];
+  const { rows } = await pool.query(
+    `SELECT m.id, m.nombre_mascota, m.telefono_propietario, c.nombre_propietario
+     FROM ${schema}.mascotas m
+     LEFT JOIN ${schema}.clientes c ON c.telefono_propietario = m.telefono_propietario
+     WHERE m.nombre_mascota ILIKE $1
+     ORDER BY m.nombre_mascota`,
+    [term]
+  );
+  return rows;
+}
+
+// ----- Servicios: pedidos por mascota (más reciente a más antiguo) -----
+async function getPedidosPorMascota(mascotaId) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows: mascotaRows } = await pool.query(
+    `SELECT id, nombre_mascota, telefono_propietario FROM ${schema}.mascotas WHERE id = $1 LIMIT 1`,
+    [mascotaId]
+  );
+  const mascota = mascotaRows[0];
+  if (!mascota) return [];
+  const { rows } = await pool.query(
+    `SELECT id, fecha_hora, servicio, groomer1, nombre_mascota
+     FROM ${schema}.pedidos
+     WHERE mascota_id = $1
+        OR (telefono_propietario = $2 AND nombre_mascota = $3)
+     ORDER BY fecha_hora DESC`,
+    [mascotaId, mascota.telefono_propietario, mascota.nombre_mascota]
+  );
+  return rows;
+}
+
 module.exports = {
   pool, ping,
   insertCliente, findClienteByTelefono, updateCliente,
   insertPedido, updatePedido, findPedidosHoyPorTelefono,
   getRazasTamano, getMascotasByTelefono, replaceMascotasForTelefono,
   upsertMascotaBasica, cerrarPedido,
-  getPedidosCerradosPorFecha,
+  getPedidosPorFecha,
+  searchMascotasByNombre, getPedidosPorMascota,
   getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
 };
 

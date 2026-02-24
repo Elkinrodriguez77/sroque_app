@@ -39,7 +39,6 @@ const PRECIOS = {
   },
 };
 
-// Mapeo de tamaños viejos a nuevos (por compatibilidad con datos existentes)
 const TAMANO_MAP = { 'Pequeño': 'Pequeños', 'Mediano': 'Medianos', 'Grande': 'Grandes' };
 function normalizeTamano(t) { return TAMANO_MAP[t] || t; }
 
@@ -176,6 +175,42 @@ function suggestPrice() {
   }
 }
 
+// ---- Adicionales: parse absolute or percentage ----
+function parseAdicionales() {
+  const raw = (document.getElementById('pedidoForm').elements['adicionales_descuentos'].value || '').trim();
+  const base = Number(document.getElementById('pedidoForm').elements['precio'].value || 0);
+
+  if (raw.endsWith('%')) {
+    const pct = parseFloat(raw.slice(0, -1));
+    if (isNaN(pct)) return 0;
+    return Math.round(base * pct / 100);
+  }
+
+  const n = Number(raw);
+  return isNaN(n) ? 0 : n;
+}
+
+// ---- Mixto payment ----
+function onMetodoPagoChange() {
+  const val = document.getElementById('metodoPagoSelect').value;
+  const mixtoWrapper = document.getElementById('mixtoWrapper');
+  mixtoWrapper.hidden = val !== 'Mixto';
+}
+
+function updateMixtoMoney() {
+  const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+  const m1 = Number(document.querySelector('[name="monto_pago_1"]').value || 0);
+  const m2 = Number(document.querySelector('[name="monto_pago_2"]').value || 0);
+  document.getElementById('montoPago1Fmt').textContent = fmt.format(m1);
+  document.getElementById('montoPago2Fmt').textContent = fmt.format(m2);
+}
+
+// ---- Info popup ----
+function toggleInfoPopup() {
+  const popup = document.getElementById('adicInfoPopup');
+  popup.hidden = !popup.hidden;
+}
+
 async function submitPedido(event) {
   event.preventDefault();
   const form = event.currentTarget;
@@ -203,6 +238,33 @@ async function submitPedido(event) {
   }
   delete data.servicio_otro;
 
+  // Resolve adicionales (percentage → absolute)
+  data.adicionales_descuentos = parseAdicionales();
+
+  // Handle Mixto payment
+  if (data.metodo_pago === 'Mixto') {
+    const mp1 = document.getElementById('mixtoPago1').value;
+    const mp2 = document.getElementById('mixtoPago2').value;
+    if (!mp1 || !mp2) {
+      errorsEl.textContent = 'Para pago Mixto, seleccione ambos métodos de pago.';
+      return;
+    }
+    if (mp1 === mp2) {
+      errorsEl.textContent = 'Los dos métodos de pago Mixto no pueden ser iguales.';
+      return;
+    }
+    data.metodo_pago = 'Mixto';
+    data.metodo_pago_1 = mp1;
+    data.metodo_pago_2 = mp2;
+    data.monto_pago_1 = Number(document.querySelector('[name="monto_pago_1"]').value || 0);
+    data.monto_pago_2 = Number(document.querySelector('[name="monto_pago_2"]').value || 0);
+  } else {
+    delete data.metodo_pago_1;
+    delete data.metodo_pago_2;
+    delete data.monto_pago_1;
+    delete data.monto_pago_2;
+  }
+
   try {
     const id = data.id && String(data.id).trim();
     const method = id ? 'PUT' : 'POST';
@@ -219,8 +281,9 @@ async function submitPedido(event) {
     }
     form.reset();
     setRazaValue('');
-    prefillPhones();
     document.getElementById('precioSugerido').hidden = true;
+    document.getElementById('mixtoWrapper').hidden = true;
+    document.getElementById('adicInfoPopup').hidden = true;
     await buscarPedidos();
   } catch {
     errorsEl.textContent = 'Error de red al guardar pedido';
@@ -233,12 +296,44 @@ async function buscarPedidos() {
   const msg = document.getElementById('pedidosMsg');
   ul.innerHTML = '';
   msg.textContent = '';
-  if (!tel) { msg.textContent = 'Ingrese un teléfono'; return; }
+  if (!tel) { msg.innerHTML = '<span style="color:#f87171">Ingrese un teléfono</span>'; return; }
+
+  // Step 1: lookup client and prefill data (like Clientes page → Registrar pedido)
+  try {
+    const clientResp = await fetch(`/api/clientes?telefono=${encodeURIComponent(tel)}`);
+    if (clientResp.ok) {
+      const clientBody = await clientResp.json();
+      if (clientBody.ok && clientBody.data) {
+        const c = clientBody.data;
+        const form = document.getElementById('pedidoForm');
+        form.elements['telefono_propietario'].value = c.telefono_propietario || tel;
+        form.elements['telefono_acudiente'].value = c.telefono_acudiente || '';
+        await cargarMascotasPorTelefono();
+        const nombre = c.nombre_propietario || c.telefono_propietario;
+        msg.innerHTML = `<span style="color:#34d399">Cliente encontrado: <strong>${nombre}</strong></span>`;
+      }
+    } else {
+      document.querySelector('#pedidoForm [name="telefono_propietario"]').value = tel;
+      document.querySelector('#pedidoForm [name="telefono_acudiente"]').value = '';
+    }
+  } catch { /* continue to pedidos search */ }
+
+  // Step 2: search existing open pedidos
   try {
     const resp = await fetch(`/api/pedidos?telefono=${encodeURIComponent(tel)}`);
     const body = await resp.json().catch(() => ({}));
-    if (!resp.ok || !body.ok) { msg.textContent = 'Error al buscar'; return; }
+    if (!resp.ok || !body.ok) {
+      msg.innerHTML += ' <span style="color:#f87171">Error al buscar pedidos</span>';
+      return;
+    }
     const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+    if (body.data.length === 0) {
+      const noP = document.createElement('li');
+      noP.className = 'pedido-meta';
+      noP.style.padding = '10px 0';
+      noP.textContent = 'No hay pedidos abiertos del día para este teléfono.';
+      ul.appendChild(noP);
+    }
     body.data.forEach((p) => {
       const li = document.createElement('li');
       li.className = 'pedido-item';
@@ -257,7 +352,12 @@ async function buscarPedidos() {
       const meta = document.createElement('div');
       meta.className = 'pedido-meta';
       const total = (Number(p.precio || 0) + Number(p.adicionales_descuentos || 0));
-      meta.textContent = `${fmt.format(total)} · Tel: ${p.telefono_propietario}`;
+      let metodoTxt = p.metodo_pago || '';
+      if (p.metodo_pago === 'Mixto' && p.metodo_pago_1 && p.metodo_pago_2) {
+        metodoTxt = `Mixto: ${p.metodo_pago_1} + ${p.metodo_pago_2}`;
+      }
+      const pisoTxt = p.piso ? ` · ${p.piso}` : '';
+      meta.textContent = `${fmt.format(total)} · ${metodoTxt}${pisoTxt} · Tel: ${p.telefono_propietario}`;
 
       const actions = document.createElement('div');
       actions.className = 'pedido-actions';
@@ -282,7 +382,7 @@ async function buscarPedidos() {
       ul.appendChild(li);
     });
   } catch {
-    msg.textContent = 'Error de red al buscar';
+    msg.innerHTML += ' <span style="color:#f87171">Error de red al buscar pedidos</span>';
   }
 }
 
@@ -292,6 +392,7 @@ function cargarPedidoEnFormulario(p) {
   form.elements['telefono_propietario'].value = p.telefono_propietario || '';
   form.elements['telefono_acudiente'].value = p.telefono_acudiente || '';
   form.elements['fecha_hora'].value = p.fecha_hora ? new Date(p.fecha_hora).toISOString().slice(0, 16) : '';
+  form.elements['piso'].value = p.piso || '';
   form.elements['mascota_id'].value = p.mascota_id || '';
   document.getElementById('nombreMascota').value = p.nombre_mascota || '';
   setRazaValue(p.raza || '');
@@ -299,7 +400,21 @@ function cargarPedidoEnFormulario(p) {
   document.getElementById('pelajeSelect').value = p.pelaje || '';
   document.getElementById('servicioSelect').value = p.servicio || '';
   onServicioChange();
-  document.getElementById('metodoPagoSelect').value = p.metodo_pago || '';
+
+  // Handle Mixto payment loading
+  if (p.metodo_pago === 'Mixto' && p.metodo_pago_1) {
+    document.getElementById('metodoPagoSelect').value = 'Mixto';
+    onMetodoPagoChange();
+    document.getElementById('mixtoPago1').value = p.metodo_pago_1 || '';
+    document.getElementById('mixtoPago2').value = p.metodo_pago_2 || '';
+    document.querySelector('[name="monto_pago_1"]').value = p.monto_pago_1 || 0;
+    document.querySelector('[name="monto_pago_2"]').value = p.monto_pago_2 || 0;
+    updateMixtoMoney();
+  } else {
+    document.getElementById('metodoPagoSelect').value = p.metodo_pago || '';
+    onMetodoPagoChange();
+  }
+
   form.elements['precio'].value = (p.precio != null) ? p.precio : 0;
   form.elements['adicionales_descuentos'].value = (p.adicionales_descuentos != null) ? p.adicionales_descuentos : 0;
   document.getElementById('groomer1Select').value = p.groomer1 || '';
@@ -309,11 +424,15 @@ function cargarPedidoEnFormulario(p) {
 }
 
 function prefillPhones() {
-  try {
-    const pre = JSON.parse(localStorage.getItem('pedido_prefill') || '{}');
-    if (pre.telefono_propietario) document.querySelector('#pedidoForm [name="telefono_propietario"]').value = pre.telefono_propietario;
-    if (pre.telefono_acudiente) document.querySelector('#pedidoForm [name="telefono_acudiente"]').value = pre.telefono_acudiente;
-  } catch { /* ignore */ }
+  const params = new URLSearchParams(window.location.search);
+  const telProp = params.get('tel_prop');
+  const telAcud = params.get('tel_acud');
+  if (telProp) document.querySelector('#pedidoForm [name="telefono_propietario"]').value = telProp;
+  if (telAcud) document.querySelector('#pedidoForm [name="telefono_acudiente"]').value = telAcud;
+  if (telProp) document.getElementById('filtroTelefono').value = telProp;
+  if (telProp || telAcud) {
+    history.replaceState({}, '', window.location.pathname);
+  }
 }
 
 async function cargarMascotasPorTelefono() {
@@ -355,26 +474,27 @@ async function cerrarPedido(id) {
     const resp = await fetch(`/api/pedidos/${id}/cerrar`, { method: 'POST' });
     const body = await resp.json().catch(() => ({}));
     if (!resp.ok || !body.ok) {
-      msg.textContent = (body?.errors?.join(', ')) || 'No se pudo cerrar el pedido';
+      msg.innerHTML = `<span style="color:#f87171">${(body?.errors?.join(', ')) || 'No se pudo cerrar el pedido'}</span>`;
       return;
     }
     await buscarPedidos();
     const form = document.getElementById('pedidoForm');
     form.reset();
     setRazaValue('');
-    prefillPhones();
     updateMoney();
     document.getElementById('precioSugerido').hidden = true;
+    document.getElementById('mixtoWrapper').hidden = true;
+    document.getElementById('adicInfoPopup').hidden = true;
     document.querySelectorAll('.pedido-item.selected').forEach((n) => n.classList.remove('selected'));
   } catch {
-    msg.textContent = 'Error de red al cerrar pedido';
+    msg.innerHTML = '<span style="color:#f87171">Error de red al cerrar pedido</span>';
   }
 }
 
 function updateMoney() {
   const f = document.getElementById('pedidoForm');
   const base = Number(f.elements['precio'].value || 0);
-  const adic = Number(f.elements['adicionales_descuentos'].value || 0);
+  const adic = parseAdicionales();
   const total = base + adic;
   const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
   document.getElementById('precioFmt').textContent = fmt.format(base);
@@ -383,6 +503,7 @@ function updateMoney() {
   adicEl.classList.toggle('negative', adic < 0);
   adicEl.classList.toggle('positive', adic > 0);
   document.getElementById('precioFinal').textContent = fmt.format(total);
+  updateMixtoMoney();
 }
 
 async function loadGroomers() {
@@ -408,7 +529,6 @@ function validateGroomers() {
 }
 
 function init() {
-  // Cargar razas desde BD
   fetch('/api/catalogos/raza-tamano')
     .then(r => r.json()).then(({ ok, data }) => {
       if (ok && data) {
@@ -418,9 +538,7 @@ function init() {
     })
     .catch(() => {});
 
-  // Llenar groomers desde BD
   loadGroomers();
-
   initRazaDropdown();
 
   document.getElementById('servicioSelect').addEventListener('change', onServicioChange);
@@ -433,9 +551,15 @@ function init() {
   document.getElementById('pedidoForm').elements['telefono_propietario'].addEventListener('change', cargarMascotasPorTelefono);
   document.getElementById('mascotaSelect').addEventListener('change', onMascotaChange);
 
+  // Mixto payment toggle
+  document.getElementById('metodoPagoSelect').addEventListener('change', onMetodoPagoChange);
+  document.querySelector('[name="monto_pago_1"]').addEventListener('input', updateMixtoMoney);
+  document.querySelector('[name="monto_pago_2"]').addEventListener('input', updateMixtoMoney);
+
+  // Info popup toggle
+  document.getElementById('adicInfoBtn').addEventListener('click', toggleInfoPopup);
+
   prefillPhones();
-  const pre = JSON.parse(localStorage.getItem('pedido_prefill') || '{}');
-  if (pre.telefono_propietario) document.getElementById('filtroTelefono').value = pre.telefono_propietario;
   cargarMascotasPorTelefono();
   updateMoney();
 }

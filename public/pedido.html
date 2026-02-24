@@ -19,6 +19,7 @@
         <a href="/pedido.html" class="active">Pedidos</a>
         <a href="/groomers.html">Equipo</a>
         <a href="/dashboard.html">Dashboard</a>
+        <a href="/servicios.html">Servicios</a>
       </nav>
     </div>
     <div class="app-header-right">
@@ -35,7 +36,7 @@
         <legend>Buscar pedidos por teléfono (propietario o acudiente)</legend>
         <input id="filtroTelefono" type="tel" maxlength="20" placeholder="Ej: 3001234567" />
         <button id="btnBuscarPedidos" type="button" class="btn-primary">Buscar</button>
-        <div id="pedidosMsg" class="errors" aria-live="polite"></div>
+        <div id="pedidosMsg" class="pedidos-msg" aria-live="polite"></div>
         <ul id="listaPedidos"></ul>
       </fieldset>
     </section>
@@ -52,6 +53,13 @@
         </label>
         <label>Fecha y hora
           <input name="fecha_hora" type="datetime-local" />
+        </label>
+        <label>Piso
+          <select name="piso" id="pisoSelect">
+            <option value="">Seleccione...</option>
+            <option value="Piso 1">Piso 1</option>
+            <option value="Piso 2">Piso 2</option>
+          </select>
         </label>
       </fieldset>
 
@@ -115,10 +123,19 @@
           <input name="precio" type="number" step="1" min="0" value="0" />
           <div class="money" id="precioFmt"></div>
         </label>
-        <label>Adicionales / Descuentos
-          <input name="adicionales_descuentos" type="number" step="1" value="0" />
+        <label>
+          <span>Adicionales / Descuentos <button type="button" class="info-btn" id="adicInfoBtn" title="Info descuentos">&#8505;</button></span>
+          <input name="adicionales_descuentos" type="text" value="0" placeholder="Ej: 50000, -50000, 10%, -10%" />
           <div class="money" id="adicionalesFmt"></div>
         </label>
+        <div class="info-popup" id="adicInfoPopup" hidden>
+          <strong>¿Cómo ingresar adicionales o descuentos?</strong>
+          <ul>
+            <li><b>Valor absoluto:</b> 50000 (adicional) o -50000 (descuento)</li>
+            <li><b>Porcentaje:</b> 10% (adicional del 10%) o -10% (descuento del 10%)</li>
+          </ul>
+          <small>El porcentaje se calcula sobre el precio base.</small>
+        </div>
         <label>Método de pago
           <select name="metodo_pago" id="metodoPagoSelect">
             <option value="">Seleccione...</option>
@@ -126,12 +143,56 @@
             <option value="Cortesía">Cortesía</option>
             <option value="Efectivo">Efectivo</option>
             <option value="Garantía">Garantía</option>
+            <option value="Mixto">Mixto</option>
+            <option value="NHP">NHP</option>
             <option value="Promoción">Promoción</option>
             <option value="Tarjeta crédito">Tarjeta crédito</option>
             <option value="Tarjeta débito">Tarjeta débito</option>
             <option value="Transferencia">Transferencia</option>
           </select>
         </label>
+        <div id="mixtoWrapper" hidden>
+          <div class="mixto-row">
+            <label>Método 1
+              <select id="mixtoPago1">
+                <option value="">Seleccione...</option>
+                <option value="Billetera digital">Billetera digital</option>
+                <option value="Cortesía">Cortesía</option>
+                <option value="Efectivo">Efectivo</option>
+                <option value="Garantía">Garantía</option>
+                <option value="NHP">NHP</option>
+                <option value="Promoción">Promoción</option>
+                <option value="Tarjeta crédito">Tarjeta crédito</option>
+                <option value="Tarjeta débito">Tarjeta débito</option>
+                <option value="Transferencia">Transferencia</option>
+              </select>
+            </label>
+            <label>Monto 1
+              <input name="monto_pago_1" type="number" step="1" min="0" value="0" />
+              <div class="money" id="montoPago1Fmt"></div>
+            </label>
+          </div>
+          <div class="mixto-row">
+            <label>Método 2
+              <select id="mixtoPago2">
+                <option value="">Seleccione...</option>
+                <option value="Billetera digital">Billetera digital</option>
+                <option value="Cortesía">Cortesía</option>
+                <option value="Efectivo">Efectivo</option>
+                <option value="Garantía">Garantía</option>
+                <option value="NHP">NHP</option>
+                <option value="Promoción">Promoción</option>
+                <option value="Tarjeta crédito">Tarjeta crédito</option>
+                <option value="Tarjeta débito">Tarjeta débito</option>
+                <option value="Transferencia">Transferencia</option>
+              </select>
+            </label>
+            <label>Monto 2
+              <input name="monto_pago_2" type="number" step="1" min="0" value="0" />
+              <div class="money" id="montoPago2Fmt"></div>
+            </label>
+          </div>
+        </div>
         <div>
           <strong>Total estimado: </strong>
           <span id="precioFinal" class="money">$0</span>
