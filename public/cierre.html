@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cierre de Caja - San Roque</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-left">
+      <img src="/img/logo_san_roque.png" alt="San Roque" />
+      <span class="app-title">San Roque</span>
+      <nav>
+        <a href="/">Clientes</a>
+        <a href="/pedido.html">Pedidos</a>
+        <a href="/groomers.html">Equipo</a>
+        <a href="/gastos.html">Gastos</a>
+        <a href="/servicios.html">Consulta Servicios</a>
+        <a href="/dashboard.html">Dashboard</a>
+        <a href="/cierre.html" class="active">Cierre</a>
+      </nav>
+    </div>
+    <div class="app-header-right">
+      <span class="user-badge" id="userBadge"></span>
+      <button class="btn-logout" id="btnLogout">Salir</button>
+    </div>
+  </header>
+
+  <main class="dash-container">
+    <h1>Cierre de Caja</h1>
+
+    <!-- Filtros -->
+    <fieldset class="dash-filter-bar">
+      <div class="dash-filters">
+        <label>Desde
+          <input type="date" id="fechaDesde" />
+        </label>
+        <label>Hasta
+          <input type="date" id="fechaHasta" />
+        </label>
+        <label>Piso
+          <select id="filtroPiso">
+            <option value="">General (todos)</option>
+            <option value="Piso 1">Piso 1</option>
+            <option value="Piso 2">Piso 2</option>
+          </select>
+        </label>
+        <button type="button" id="btnConsultar" class="btn-primary">Consultar</button>
+      </div>
+    </fieldset>
+
+    <!-- Formulario Boutique -->
+    <fieldset>
+      <legend>Registrar venta Boutique</legend>
+      <form id="boutiqueForm" class="cierre-boutique-form">
+        <label>Fecha
+          <input type="date" name="fecha" required />
+        </label>
+        <label>Método de pago
+          <select name="metodo_pago" required>
+            <option value="">Seleccione...</option>
+            <option value="Efectivo">Efectivo</option>
+            <option value="Datáfono">Datáfono</option>
+            <option value="Link De Pago Tumi">Link De Pago Tumi</option>
+            <option value="Transferencia Bancolombia">Transferencia Bancolombia</option>
+            <option value="Nequi">Nequi</option>
+            <option value="Daviplata">Daviplata</option>
+            <option value="Cortesía">Cortesía</option>
+            <option value="NHP">NHP</option>
+          </select>
+        </label>
+        <label>Monto $
+          <input type="number" name="monto" step="1" min="1" required />
+        </label>
+        <label>Piso
+          <select name="piso">
+            <option value="">Seleccione...</option>
+            <option value="Piso 1">Piso 1</option>
+            <option value="Piso 2">Piso 2</option>
+          </select>
+        </label>
+        <button type="submit" class="btn-primary">Registrar</button>
+      </form>
+      <div id="boutiqueErrors" class="errors" aria-live="polite"></div>
+      <div id="boutiqueMsg" class="success" aria-live="polite"></div>
+
+      <div id="boutiqueList" hidden>
+        <h3 style="margin-top:16px">Ventas Boutique registradas</h3>
+        <div class="dash-table-wrap">
+          <table class="dash-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Método</th>
+                <th>Monto</th>
+                <th>Piso</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="boutiqueBody"></tbody>
+            <tfoot id="boutiqueFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- Reporte cruce -->
+    <div id="cierreReport" hidden>
+      <h3>Reporte de Cierre</h3>
+      <div class="dash-results">
+        <div class="dash-tab-panel">
+          <div class="dash-table-wrap">
+            <table class="dash-table cierre-table">
+              <thead>
+                <tr>
+                  <th>Método de pago</th>
+                  <th>Ingresos SPA</th>
+                  <th>Ingresos Boutique</th>
+                  <th>Total Ingresos</th>
+                  <th>Gastos</th>
+                  <th>Balance</th>
+                </tr>
+              </thead>
+              <tbody id="cierreBody"></tbody>
+              <tfoot id="cierreFoot"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="cierreGranTotal" class="cierre-gran-total"></div>
+    </div>
+
+    <div id="cierreMsg" class="pedidos-msg" aria-live="polite"></div>
+  </main>
+
+  <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
+  <script src="/cierre.js" defer></script>
+</body>
+</html>

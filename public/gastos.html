@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gastos - San Roque</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-left">
+      <img src="/img/logo_san_roque.png" alt="San Roque" />
+      <span class="app-title">San Roque</span>
+      <nav>
+        <a href="/">Clientes</a>
+        <a href="/pedido.html">Pedidos</a>
+        <a href="/groomers.html">Equipo</a>
+        <a href="/gastos.html" class="active">Gastos</a>
+        <a href="/servicios.html">Consulta Servicios</a>
+        <a href="/dashboard.html">Dashboard</a>
+        <a href="/cierre.html">Cierre</a>
+      </nav>
+    </div>
+    <div class="app-header-right">
+      <span class="user-badge" id="userBadge"></span>
+      <button class="btn-logout" id="btnLogout">Salir</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>Gastos</h1>
+
+    <form id="gastoForm">
+      <input type="hidden" name="id" />
+      <fieldset>
+        <legend id="formLegend">Registrar gasto</legend>
+        <label>Fecha
+          <input name="fecha" type="date" required />
+        </label>
+        <label>Tercero / Beneficiario
+          <input name="tercero" type="text" maxlength="200" required placeholder="Nombre de la persona o empresa" />
+        </label>
+        <label>Descripción detallada del pago
+          <textarea name="descripcion" maxlength="500" required placeholder="Detalle del gasto..."></textarea>
+        </label>
+        <label>Monto $
+          <input name="monto" type="number" step="1" min="1" required />
+          <div class="money" id="montoFmt"></div>
+        </label>
+        <label>Categoría
+          <select name="categoria" id="categoriaSelect" required>
+            <option value="">Seleccione...</option>
+            <option value="Adecuaciones">Adecuaciones</option>
+            <option value="Adelanto">Adelanto</option>
+            <option value="Arriendo">Arriendo</option>
+            <option value="Aseo">Aseo</option>
+            <option value="Cafetería">Cafetería</option>
+            <option value="Crédito">Crédito</option>
+            <option value="Devolución">Devolución</option>
+            <option value="Dotación">Dotación</option>
+            <option value="Gasto De Representación">Gasto De Representación</option>
+            <option value="Gastos Legales Y Contabilidad">Gastos Legales Y Contabilidad</option>
+            <option value="Human Friendly">Human Friendly</option>
+            <option value="Impresiones">Impresiones</option>
+            <option value="Insumos">Insumos</option>
+            <option value="Inversión">Inversión</option>
+            <option value="Mantenimiento">Mantenimiento</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Medicamento">Medicamento</option>
+            <option value="Nómina Admin">Nómina Admin</option>
+            <option value="Nómina Aseo">Nómina Aseo</option>
+            <option value="Nómina Auxiliar">Nómina Auxiliar</option>
+            <option value="Nómina Groomer">Nómina Groomer</option>
+            <option value="Onces">Onces</option>
+            <option value="Papelería">Papelería</option>
+            <option value="Parqueadero">Parqueadero</option>
+            <option value="Productos Nevera">Productos Nevera</option>
+            <option value="Publicidad">Publicidad</option>
+            <option value="Retiro">Retiro</option>
+            <option value="Seguridad">Seguridad</option>
+            <option value="Servicios">Servicios</option>
+            <option value="Transporte">Transporte</option>
+            <option value="Otros">Otros</option>
+          </select>
+        </label>
+        <label id="categoriaOtroWrapper" hidden>Especifique "Otros"
+          <input name="categoria_otro" type="text" maxlength="100" placeholder="¿Cuál categoría?" />
+        </label>
+        <label>Método de pago
+          <select name="metodo_pago" required>
+            <option value="">Seleccione...</option>
+            <option value="Efectivo">Efectivo</option>
+            <option value="Datáfono">Datáfono</option>
+            <option value="Link De Pago Tumi">Link De Pago Tumi</option>
+            <option value="Transferencia Bancolombia">Transferencia Bancolombia</option>
+            <option value="Nequi">Nequi</option>
+            <option value="Daviplata">Daviplata</option>
+            <option value="Cortesía">Cortesía</option>
+            <option value="NHP">NHP</option>
+          </select>
+        </label>
+        <label>Piso
+          <select name="piso">
+            <option value="">Seleccione...</option>
+            <option value="Piso 1">Piso 1</option>
+            <option value="Piso 2">Piso 2</option>
+          </select>
+        </label>
+      </fieldset>
+      <div id="gastoErrors" class="errors" aria-live="polite"></div>
+      <button type="submit">Guardar gasto</button>
+      <button type="button" id="btnCancelar" hidden>Cancelar edición</button>
+    </form>
+
+    <div id="gastoMsg" class="success" aria-live="polite"></div>
+  </main>
+
+  <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
+  <script src="/gastos.js" defer></script>
+</body>
+</html>

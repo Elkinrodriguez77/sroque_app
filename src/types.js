@@ -110,4 +110,33 @@ function validatePedido(pedido) {
 module.exports.sanitizePedidoInput = sanitizePedidoInput;
 module.exports.validatePedido = validatePedido;
 
+// -------- Gastos --------
+function sanitizeGastoInput(input) {
+  return {
+    fecha: input.fecha ? String(input.fecha).trim() : '',
+    tercero: input.tercero ? String(input.tercero).trim() : '',
+    descripcion: input.descripcion ? String(input.descripcion).trim() : '',
+    monto: toNumberOrZero(input.monto),
+    categoria: input.categoria ? String(input.categoria).trim() : '',
+    categoria_otro: input.categoria === 'Otros' && input.categoria_otro ? String(input.categoria_otro).trim() : null,
+    metodo_pago: input.metodo_pago ? String(input.metodo_pago).trim() : '',
+    piso: input.piso ? String(input.piso).trim() : undefined,
+  };
+}
+
+function validateGasto(gasto) {
+  const errors = [];
+  if (!gasto.fecha) errors.push('Fecha es requerida');
+  if (!gasto.tercero) errors.push('Tercero / Beneficiario es requerido');
+  if (!gasto.descripcion) errors.push('Descripción es requerida');
+  if (!gasto.monto || gasto.monto <= 0) errors.push('Monto debe ser mayor a 0');
+  if (!gasto.categoria) errors.push('Categoría es requerida');
+  if (gasto.categoria === 'Otros' && !gasto.categoria_otro) errors.push('Especifique la categoría "Otros"');
+  if (!gasto.metodo_pago) errors.push('Método de pago es requerido');
+  return errors;
+}
+
+module.exports.sanitizeGastoInput = sanitizeGastoInput;
+module.exports.validateGasto = validateGasto;
+
 

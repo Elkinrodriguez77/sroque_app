@@ -421,14 +421,18 @@ async function upsertMascotaBasica({ telefono_propietario, mascota_id, nombre_ma
 }
 
 // ----- Dashboard -----
-async function getPedidosPorFecha(fechaDesde, fechaHasta, estado) {
+async function getPedidosPorFecha(fechaDesde, fechaHasta, estado, piso) {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
-  let cerradoFilter = '';
+  let filters = '';
   const params = [fechaDesde, fechaHasta];
   if (estado === 'cerrados') {
-    cerradoFilter = ' AND COALESCE(p.cerrado, false) = true';
+    filters += ' AND COALESCE(p.cerrado, false) = true';
   } else if (estado === 'abiertos') {
-    cerradoFilter = ' AND COALESCE(p.cerrado, false) = false';
+    filters += ' AND COALESCE(p.cerrado, false) = false';
+  }
+  if (piso) {
+    params.push(piso);
+    filters += ` AND p.piso = $${params.length}`;
   }
   const { rows } = await pool.query(
     `SELECT p.id, p.telefono_propietario, p.telefono_acudiente, p.fecha_hora, p.piso,
@@ -442,7 +446,7 @@ async function getPedidosPorFecha(fechaDesde, fechaHasta, estado) {
      LEFT JOIN ${schema}.clientes c ON c.telefono_propietario = p.telefono_propietario
      WHERE (p.fecha_hora AT TIME ZONE 'America/Bogota')::date >= $1::date
        AND (p.fecha_hora AT TIME ZONE 'America/Bogota')::date <= $2::date
-       ${cerradoFilter}
+       ${filters}
      ORDER BY p.fecha_hora DESC`,
     params
   );
@@ -529,6 +533,95 @@ async function getPedidosPorMascota(mascotaId) {
   return rows;
 }
 
+// ----- Gastos -----
+async function insertGasto(gasto) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `INSERT INTO ${schema}.gastos (fecha, tercero, descripcion, monto, categoria, categoria_otro, metodo_pago, piso)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+     RETURNING *`,
+    [gasto.fecha, gasto.tercero, gasto.descripcion, gasto.monto,
+     gasto.categoria, gasto.categoria_otro || null, gasto.metodo_pago, gasto.piso || null]
+  );
+  return rows[0];
+}
+
+async function getGastosPorFecha(fechaDesde, fechaHasta, piso) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const params = [fechaDesde, fechaHasta];
+  let pisoFilter = '';
+  if (piso) {
+    params.push(piso);
+    pisoFilter = ` AND piso = $${params.length}`;
+  }
+  const { rows } = await pool.query(
+    `SELECT * FROM ${schema}.gastos
+     WHERE fecha >= $1::date AND fecha <= $2::date${pisoFilter}
+     ORDER BY fecha DESC, created_at DESC`,
+    params
+  );
+  return rows;
+}
+
+async function updateGasto(id, gasto) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `UPDATE ${schema}.gastos SET
+       fecha = $2, tercero = $3, descripcion = $4, monto = $5,
+       categoria = $6, categoria_otro = $7, metodo_pago = $8, piso = $9
+     WHERE id = $1
+     RETURNING *`,
+    [id, gasto.fecha, gasto.tercero, gasto.descripcion, gasto.monto,
+     gasto.categoria, gasto.categoria_otro || null, gasto.metodo_pago, gasto.piso || null]
+  );
+  return rows[0] || null;
+}
+
+async function deleteGasto(id) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `DELETE FROM ${schema}.gastos WHERE id = $1 RETURNING id`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+// ----- Boutique -----
+async function insertBoutique(data) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `INSERT INTO ${schema}.venta_boutique (fecha, metodo_pago, monto, piso)
+     VALUES ($1,$2,$3,$4) RETURNING *`,
+    [data.fecha, data.metodo_pago, data.monto, data.piso || null]
+  );
+  return rows[0];
+}
+
+async function getBoutiquePorFecha(fechaDesde, fechaHasta, piso) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const params = [fechaDesde, fechaHasta];
+  let pisoFilter = '';
+  if (piso) {
+    params.push(piso);
+    pisoFilter = ` AND piso = $${params.length}`;
+  }
+  const { rows } = await pool.query(
+    `SELECT * FROM ${schema}.venta_boutique
+     WHERE fecha >= $1::date AND fecha <= $2::date${pisoFilter}
+     ORDER BY fecha DESC, created_at DESC`,
+    params
+  );
+  return rows;
+}
+
+async function deleteBoutique(id) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `DELETE FROM ${schema}.venta_boutique WHERE id = $1 RETURNING id`, [id]
+  );
+  return rows[0] || null;
+}
+
 module.exports = {
   pool, ping,
   insertCliente, findClienteByTelefono, updateCliente,
@@ -537,6 +630,8 @@ module.exports = {
   upsertMascotaBasica, cerrarPedido,
   getPedidosPorFecha,
   searchMascotasByNombre, getPedidosPorMascota,
+  insertGasto, getGastosPorFecha, updateGasto, deleteGasto,
+  insertBoutique, getBoutiquePorFecha, deleteBoutique,
   getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
 };
 

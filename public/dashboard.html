@@ -18,8 +18,10 @@
         <a href="/">Clientes</a>
         <a href="/pedido.html">Pedidos</a>
         <a href="/groomers.html">Equipo</a>
+        <a href="/gastos.html">Gastos</a>
+        <a href="/servicios.html">Consulta Servicios</a>
         <a href="/dashboard.html" class="active">Dashboard</a>
-        <a href="/servicios.html">Servicios</a>
+        <a href="/cierre.html">Cierre</a>
       </nav>
     </div>
     <div class="app-header-right">
@@ -28,11 +30,15 @@
     </div>
   </header>
 
-  <main class="container dash-main">
+  <main class="dash-container">
     <h1>Dashboard</h1>
 
-    <fieldset>
-      <legend>Filtrar</legend>
+    <div class="dash-mode-toggle">
+      <button type="button" class="dash-mode active" data-mode="ingresos">Ingresos</button>
+      <button type="button" class="dash-mode" data-mode="gastos">Gastos</button>
+    </div>
+
+    <fieldset class="dash-filter-bar">
       <div class="dash-filters">
         <label>Desde
           <input type="date" id="fechaDesde" />
@@ -40,11 +46,18 @@
         <label>Hasta
           <input type="date" id="fechaHasta" />
         </label>
-        <label>Estado
+        <label id="filtroEstadoWrap">Estado
           <select id="filtroEstado">
             <option value="cerrados">Cerrados</option>
             <option value="abiertos">Abiertos</option>
             <option value="todos">Todos</option>
+          </select>
+        </label>
+        <label>Piso
+          <select id="filtroPiso">
+            <option value="">Todos</option>
+            <option value="Piso 1">Piso 1</option>
+            <option value="Piso 2">Piso 2</option>
           </select>
         </label>
         <button type="button" id="btnConsultar" class="btn-primary">Consultar</button>
@@ -53,52 +66,97 @@
 
     <div id="dashSummary" class="dash-summary" hidden></div>
 
-    <div id="dashResults" class="dash-results" hidden>
-      <div class="dash-tabs">
-        <button type="button" class="dash-tab active" data-tab="pedidos">Pedidos</button>
-        <button type="button" class="dash-tab" data-tab="pagos">Pagos por medio</button>
-      </div>
-      <div id="dashTabPedidos" class="dash-tab-panel">
-        <div class="dash-table-wrap">
-          <table class="dash-table">
-            <thead>
-              <tr>
-                <th>Fecha/Hora</th>
-                <th>Propietario</th>
-                <th>Mascota</th>
-                <th>Servicio</th>
-                <th>Piso</th>
-                <th>Tamaño</th>
-                <th>Pelaje</th>
-                <th>Precio</th>
-                <th>Adic/Desc</th>
-                <th>Total</th>
-                <th>Pago</th>
-                <th>Groomer(s)</th>
-                <th>Teléfono</th>
-              </tr>
-            </thead>
-            <tbody id="dashBody"></tbody>
-          </table>
+    <!-- ===== INGRESOS SECTION ===== -->
+    <div id="secIngresos">
+      <div id="dashResults" class="dash-results" hidden>
+        <div class="dash-tabs">
+          <button type="button" class="dash-tab active" data-tab="pedidos">Pedidos</button>
+          <button type="button" class="dash-tab" data-tab="pagos">Pagos por medio</button>
+          <button type="button" class="dash-tab" data-tab="groomers">Servicios por Groomer</button>
         </div>
-      </div>
-      <div id="dashTabPagos" class="dash-tab-panel" hidden>
-        <div class="dash-table-wrap">
-          <table class="dash-table dash-table-pagos">
-            <thead>
-              <tr>
-                <th>Medio de pago</th>
-                <th>Pedidos</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody id="dashPagosBody"></tbody>
-          </table>
+        <div id="dashTabPedidos" class="dash-tab-panel">
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead>
+                <tr>
+                  <th>Fecha/Hora</th>
+                  <th>Propietario</th>
+                  <th>Mascota</th>
+                  <th>Servicio</th>
+                  <th>Piso</th>
+                  <th>Tamaño</th>
+                  <th>Pelaje</th>
+                  <th>Precio</th>
+                  <th>Adic/Desc</th>
+                  <th>Total</th>
+                  <th>Pago</th>
+                  <th>Groomer(s)</th>
+                  <th>Teléfono</th>
+                </tr>
+              </thead>
+              <tbody id="dashBody"></tbody>
+              <tfoot id="dashPedidosFoot"></tfoot>
+            </table>
+          </div>
+        </div>
+        <div id="dashTabPagos" class="dash-tab-panel" hidden>
+          <div class="dash-table-wrap">
+            <table class="dash-table dash-table-pagos">
+              <thead>
+                <tr>
+                  <th>Medio de pago</th>
+                  <th>Pedidos</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="dashPagosBody"></tbody>
+              <tfoot id="dashPagosFoot"></tfoot>
+            </table>
+          </div>
+        </div>
+        <div id="dashTabGroomers" class="dash-tab-panel" hidden>
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead>
+                <tr>
+                  <th>Groomer</th>
+                  <th>Servicios realizados</th>
+                </tr>
+              </thead>
+              <tbody id="dashGroomersBody"></tbody>
+              <tfoot id="dashGroomersFoot"></tfoot>
+            </table>
+          </div>
         </div>
       </div>
     </div>
 
-    <div id="dashMsg" class="errors" aria-live="polite"></div>
+    <!-- ===== GASTOS SECTION ===== -->
+    <div id="secGastos" hidden>
+      <div id="gastosResults" class="dash-results" hidden>
+        <div class="dash-tab-panel">
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tercero</th>
+                  <th>Descripción</th>
+                  <th>Monto</th>
+                  <th>Categoría</th>
+                  <th>Pago</th>
+                  <th>Piso</th>
+                </tr>
+              </thead>
+              <tbody id="dashGastosBody"></tbody>
+              <tfoot id="dashGastosFoot"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="dashMsg" class="pedidos-msg" aria-live="polite"></div>
   </main>
 
   <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>

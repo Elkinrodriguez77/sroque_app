@@ -9,9 +9,11 @@ const {
   getMascotasByTelefono, replaceMascotasForTelefono, upsertMascotaBasica, cerrarPedido,
   getPedidosPorFecha,
   searchMascotasByNombre, getPedidosPorMascota,
+  insertGasto, getGastosPorFecha, updateGasto, deleteGasto,
+  insertBoutique, getBoutiquePorFecha, deleteBoutique,
   getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
 } = require('./db');
-const { sanitizeClienteInput, validateCliente, sanitizePedidoInput, validatePedido } = require('./types');
+const { sanitizeClienteInput, validateCliente, sanitizePedidoInput, validatePedido, sanitizeGastoInput, validateGasto } = require('./types');
 const { findUserByUsername, verifyPassword, requireAuth, loginRateLimiter, recordFailedAttempt, clearAttempts } = require('./auth');
 
 const app = express();
@@ -246,9 +248,10 @@ app.get('/api/dashboard/pedidos', async (req, res) => {
   try {
     const desde = req.query.desde;
     const hasta = req.query.hasta;
-    const estado = req.query.estado || 'cerrados'; // cerrados | abiertos | todos
+    const estado = req.query.estado || 'cerrados';
+    const piso = req.query.piso || '';
     if (!desde || !hasta) return res.status(400).json({ ok: false, errors: ['desde y hasta son requeridos'] });
-    const rows = await getPedidosPorFecha(desde, hasta, estado);
+    const rows = await getPedidosPorFecha(desde, hasta, estado, piso);
     res.json({ ok: true, data: rows });
   } catch (e) {
     console.error('Dashboard error:', e);
@@ -277,6 +280,107 @@ app.get('/api/servicios/pedidos/:mascotaId', async (req, res) => {
     res.json({ ok: true, data: rows });
   } catch (e) {
     console.error('Pedidos por mascota error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+// -------- Gastos --------
+app.get('/api/gastos', async (req, res) => {
+  try {
+    const desde = req.query.desde;
+    const hasta = req.query.hasta;
+    const piso = req.query.piso || '';
+    if (!desde || !hasta) return res.status(400).json({ ok: false, errors: ['desde y hasta son requeridos'] });
+    const rows = await getGastosPorFecha(desde, hasta, piso);
+    res.json({ ok: true, data: rows });
+  } catch (e) {
+    console.error('Get gastos error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.post('/api/gastos', async (req, res) => {
+  try {
+    const sanitized = sanitizeGastoInput(req.body);
+    const errors = validateGasto(sanitized);
+    if (errors.length > 0) return res.status(400).json({ ok: false, errors });
+    const created = await insertGasto(sanitized);
+    res.status(201).json({ ok: true, data: created });
+  } catch (e) {
+    console.error('Insert gasto error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.put('/api/gastos/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
+    const sanitized = sanitizeGastoInput(req.body);
+    const errors = validateGasto(sanitized);
+    if (errors.length > 0) return res.status(400).json({ ok: false, errors });
+    const updated = await updateGasto(id, sanitized);
+    if (!updated) return res.status(404).json({ ok: false, errors: ['Gasto no encontrado'] });
+    res.json({ ok: true, data: updated });
+  } catch (e) {
+    console.error('Update gasto error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.delete('/api/gastos/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
+    const deleted = await deleteGasto(id);
+    if (!deleted) return res.status(404).json({ ok: false, errors: ['Gasto no encontrado'] });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Delete gasto error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+// -------- Boutique --------
+app.get('/api/boutique', async (req, res) => {
+  try {
+    const desde = req.query.desde;
+    const hasta = req.query.hasta;
+    const piso = req.query.piso || '';
+    if (!desde || !hasta) return res.status(400).json({ ok: false, errors: ['desde y hasta son requeridos'] });
+    const rows = await getBoutiquePorFecha(desde, hasta, piso);
+    res.json({ ok: true, data: rows });
+  } catch (e) {
+    console.error('Get boutique error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.post('/api/boutique', async (req, res) => {
+  try {
+    const { fecha, metodo_pago, monto, piso } = req.body;
+    const errors = [];
+    if (!fecha) errors.push('Fecha es requerida');
+    if (!metodo_pago) errors.push('Método de pago es requerido');
+    if (!monto || Number(monto) <= 0) errors.push('Monto debe ser mayor a 0');
+    if (errors.length > 0) return res.status(400).json({ ok: false, errors });
+    const created = await insertBoutique({ fecha, metodo_pago, monto: Number(monto), piso: piso || null });
+    res.status(201).json({ ok: true, data: created });
+  } catch (e) {
+    console.error('Insert boutique error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.delete('/api/boutique/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
+    const deleted = await deleteBoutique(id);
+    if (!deleted) return res.status(404).json({ ok: false, errors: ['Registro no encontrado'] });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Delete boutique error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno'] });
   }
 });

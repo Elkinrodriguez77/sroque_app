@@ -183,8 +183,26 @@ button[type="button"]:hover { background: #4b5563; color: #f9fafb; }
 .badge-inactive { background: rgba(248,113,113,0.15); color: #f87171; }
 
 /* ---- Dashboard ---- */
+.dash-container {
+  max-width: 1400px; width: 100%;
+  margin: 0 auto; padding: 24px 32px;
+}
+
+.dash-mode-toggle {
+  display: inline-flex; gap: 0; border-radius: 10px; overflow: hidden;
+  border: 1px solid #374151; margin-bottom: 20px;
+}
+.dash-mode {
+  padding: 10px 28px; border: none; background: #1f2937;
+  color: #9ca3af; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+  font-family: 'Montserrat', system-ui, sans-serif; transition: all 0.2s;
+}
+.dash-mode:hover { color: #e5e7eb; background: #283548; }
+.dash-mode.active { background: #6366f1; color: #fff; }
+
+.dash-filter-bar { margin-bottom: 20px; }
 .dash-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.dash-filters label { flex: 1; min-width: 140px; }
+.dash-filters label { flex: 1; min-width: 130px; }
 .dash-filters button { align-self: flex-end; margin-bottom: 0; }
 
 .dash-summary {
@@ -198,7 +216,6 @@ button[type="button"]:hover { background: #4b5563; color: #f9fafb; }
 .dash-stat-value { font-size: 1.3rem; font-weight: 700; color: #f9fafb; }
 .dash-stat-detail { font-size: 0.85rem; font-weight: 500; color: #a5b4fc; }
 
-.container.dash-main { padding-left: 8px; padding-right: 8px; }
 .dash-results {
   margin: 0; padding: 0; border: 1px solid #374151; border-radius: 12px;
   background: #1f2937; overflow: hidden;
@@ -214,7 +231,7 @@ button[type="button"]:hover { background: #4b5563; color: #f9fafb; }
 .dash-tab:hover { color: #e5e7eb; }
 .dash-tab.active { color: #a5b4fc; border-bottom-color: #6366f1; }
 .dash-tab-panel {
-  padding: 12px 4px 12px 4px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  padding: 12px 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;
 }
 .dash-table-wrap {
   overflow-x: auto; -webkit-overflow-scrolling: touch;
@@ -233,6 +250,10 @@ button[type="button"]:hover { background: #4b5563; color: #f9fafb; }
   white-space: nowrap;
 }
 .dash-table tr:hover td { background: rgba(99,102,241,0.05); }
+.dash-table tfoot td {
+  border-top: 2px solid #6366f1; padding: 10px 8px;
+  background: rgba(99,102,241,0.06); color: #f9fafb;
+}
 .txt-red { color: #f87171; }
 .txt-green { color: #34d399; }
 
@@ -307,10 +328,42 @@ button[type="button"]:hover { background: #4b5563; color: #f9fafb; }
   padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(99,102,241,0.3);
 }
 
+/* ---- Cierre de caja ---- */
+.cierre-boutique-form {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+}
+.cierre-boutique-form label { flex: 1; min-width: 150px; }
+.cierre-boutique-form button { align-self: flex-end; white-space: nowrap; }
+
+.cierre-table tfoot td {
+  border-top: 2px solid #6366f1; padding: 10px 8px; background: rgba(99,102,241,0.06);
+}
+
+.cierre-gran-total {
+  margin-top: 24px; padding: 28px 24px; text-align: center;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 2px solid #6366f1; border-radius: 16px;
+  box-shadow: 0 0 30px rgba(99,102,241,0.2);
+}
+.cierre-label {
+  font-size: 0.85rem; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: #a5b4fc; margin-bottom: 8px;
+}
+.cierre-value {
+  font-size: 2.8rem; font-weight: 800; font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.cierre-positive { color: #34d399; }
+.cierre-negative { color: #f87171; }
+.cierre-detail {
+  margin-top: 12px; font-size: 0.85rem; color: #9ca3af;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 600px) {
   .app-header { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
   .app-header nav { gap: 10px; }
   .container { padding: 16px 10px; }
+  .dash-container { padding: 16px 10px; }
   fieldset { padding: 10px; }
 }
