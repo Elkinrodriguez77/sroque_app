@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Servicios por mascota - San Roque</title>
+  <title>Consulta Servicios - San Roque</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -33,9 +33,14 @@
   <main class="container">
     <h1>Historial de servicios por mascota</h1>
 
+    <div class="dash-mode-toggle" style="margin-bottom:16px">
+      <button type="button" class="dash-mode active" data-source="sistema">Histórico Sistema</button>
+      <button type="button" class="dash-mode" data-source="excel">Histórico Excel</button>
+    </div>
+
     <fieldset>
       <legend>Buscar por nombre de mascota</legend>
-      <p class="hint">Escribe el nombre (ej: Toby, Tobby). Si hay varias mascotas con nombres similares, selecciona la correcta según el propietario.</p>
+      <p class="hint" id="searchHint">Escribe el nombre (ej: Toby, Tobby). Si hay varias mascotas con nombres similares, selecciona la correcta según el propietario.</p>
       <div class="dash-filters">
         <label>Nombre mascota
           <input type="text" id="nombreMascota" placeholder="Ej: Toby" maxlength="200" />
@@ -59,9 +64,9 @@
           <table class="dash-table">
             <thead>
               <tr>
-                <th>Fecha/Hora</th>
+                <th>Fecha</th>
                 <th>Servicio</th>
-                <th>Groomer</th>
+                <th id="thGroomer">Groomer</th>
               </tr>
             </thead>
             <tbody id="serviciosBody"></tbody>

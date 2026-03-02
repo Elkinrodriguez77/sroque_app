@@ -259,6 +259,55 @@ app.get('/api/dashboard/pedidos', async (req, res) => {
   }
 });
 
+// -------- Histórico CSV (datos Excel) --------
+const fs = require('fs');
+let csvHistorico = [];
+(function loadCSV() {
+  try {
+    const csvPath = path.join(__dirname, '..', 'recursos', 'datos_historicos.csv');
+    const raw = fs.readFileSync(csvPath, 'utf-8');
+    const lines = raw.split(/\r?\n/).filter(l => l.trim());
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(';');
+      if (cols.length < 5) continue;
+      const [fechaRaw, nombre_mascota, nombre_propietario, servicio, telefono] = cols;
+      const parts = fechaRaw.split('/');
+      let fechaISO = fechaRaw;
+      if (parts.length === 3) {
+        fechaISO = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+      csvHistorico.push({ fecha: fechaISO, nombre_mascota: nombre_mascota.trim(), nombre_propietario: nombre_propietario.trim(), servicio: servicio.trim(), telefono: telefono.trim() });
+    }
+    csvHistorico.sort((a, b) => b.fecha.localeCompare(a.fecha));
+    console.log(`CSV histórico cargado: ${csvHistorico.length} registros`);
+  } catch (e) {
+    console.warn('No se pudo cargar CSV histórico:', e.message);
+  }
+})();
+
+app.get('/api/historico/buscar-mascotas', (req, res) => {
+  const nombre = (req.query.nombre || '').trim().toLowerCase();
+  if (!nombre) return res.status(400).json({ ok: false, errors: ['nombre es requerido'] });
+  const seen = new Map();
+  for (const r of csvHistorico) {
+    if (r.nombre_mascota.toLowerCase().includes(nombre)) {
+      const key = `${r.nombre_mascota}|${r.telefono}`;
+      if (!seen.has(key)) {
+        seen.set(key, { nombre_mascota: r.nombre_mascota, nombre_propietario: r.nombre_propietario, telefono: r.telefono });
+      }
+    }
+  }
+  res.json({ ok: true, data: Array.from(seen.values()) });
+});
+
+app.get('/api/historico/servicios', (req, res) => {
+  const mascota = (req.query.mascota || '').trim();
+  const tel = (req.query.telefono || '').trim();
+  if (!mascota || !tel) return res.status(400).json({ ok: false, errors: ['mascota y telefono son requeridos'] });
+  const rows = csvHistorico.filter(r => r.nombre_mascota === mascota && r.telefono === tel);
+  res.json({ ok: true, data: rows });
+});
+
 // -------- Servicios (historial por mascota) --------
 app.get('/api/servicios/buscar-mascotas', async (req, res) => {
   try {

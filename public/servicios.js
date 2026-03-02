@@ -13,14 +13,36 @@ document.getElementById('btnLogout')?.addEventListener('click', async () => {
   window.location.href = '/login.html';
 });
 
+let currentSource = 'sistema';
+
+function switchSource(source) {
+  currentSource = source;
+  document.querySelectorAll('.dash-mode').forEach(b => b.classList.toggle('active', b.dataset.source === source));
+  document.getElementById('mascotasList').hidden = true;
+  document.getElementById('pedidosList').hidden = true;
+  document.getElementById('serviciosMsg').textContent = '';
+  document.getElementById('nombreMascota').value = '';
+  document.getElementById('thGroomer').textContent = source === 'sistema' ? 'Groomer' : '';
+  document.getElementById('thGroomer').hidden = source !== 'sistema';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('btnBuscar').addEventListener('click', buscarMascotas);
+  document.getElementById('btnBuscar').addEventListener('click', buscar);
   document.getElementById('nombreMascota').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); buscarMascotas(); }
+    if (e.key === 'Enter') { e.preventDefault(); buscar(); }
+  });
+  document.querySelectorAll('.dash-mode').forEach(btn => {
+    btn.addEventListener('click', () => switchSource(btn.dataset.source));
   });
 });
 
-async function buscarMascotas() {
+function buscar() {
+  if (currentSource === 'sistema') buscarSistema();
+  else buscarExcel();
+}
+
+// ===== SISTEMA (PostgreSQL) =====
+async function buscarSistema() {
   const nombre = document.getElementById('nombreMascota').value.trim();
   const msg = document.getElementById('serviciosMsg');
   const mascotasList = document.getElementById('mascotasList');
@@ -51,16 +73,15 @@ async function buscarMascotas() {
       return;
     }
 
-    mascotasUl.innerHTML = '';
     mascotas.forEach((m) => {
       const li = document.createElement('li');
       li.dataset.id = m.id;
       li.innerHTML = `
-        <span class="mascota-nombre">${escapeHtml(m.nombre_mascota || 'Sin nombre')}</span>
-        <span class="mascota-prop">Propietario: ${escapeHtml(m.nombre_propietario || '-')}</span>
-        <span class="mascota-tel mascota-tel-key">Tel: ${escapeHtml(m.telefono_propietario || '-')}</span>
+        <span class="mascota-nombre">${esc(m.nombre_mascota || 'Sin nombre')}</span>
+        <span class="mascota-prop">Propietario: ${esc(m.nombre_propietario || '-')}</span>
+        <span class="mascota-tel mascota-tel-key">Tel: ${esc(m.telefono_propietario || '-')}</span>
       `;
-      li.addEventListener('click', () => seleccionarMascota(m));
+      li.addEventListener('click', () => seleccionarSistema(m));
       mascotasUl.appendChild(li);
     });
     mascotasList.hidden = false;
@@ -70,23 +91,16 @@ async function buscarMascotas() {
   }
 }
 
-function escapeHtml(s) {
-  const div = document.createElement('div');
-  div.textContent = s;
-  return div.innerHTML;
-}
-
-async function seleccionarMascota(mascota) {
-  const mascotasList = document.getElementById('mascotasList');
+async function seleccionarSistema(mascota) {
   const pedidosList = document.getElementById('pedidosList');
   const pedidosLegend = document.getElementById('pedidosLegend');
   const serviciosBody = document.getElementById('serviciosBody');
   const sinServicios = document.getElementById('sinServicios');
   const msg = document.getElementById('serviciosMsg');
 
-  mascotasList.hidden = true;
+  document.getElementById('mascotasList').hidden = true;
   pedidosList.hidden = false;
-  pedidosLegend.textContent = `Servicios realizados — ${mascota.nombre_mascota || 'Mascota'} (${mascota.nombre_propietario || 'Propietario'})`;
+  pedidosLegend.textContent = `Servicios — ${mascota.nombre_mascota || 'Mascota'} (${mascota.nombre_propietario || 'Propietario'})`;
   serviciosBody.innerHTML = '';
   sinServicios.hidden = true;
   msg.textContent = '';
@@ -102,7 +116,6 @@ async function seleccionarMascota(mascota) {
     const pedidos = data.data || [];
     if (pedidos.length === 0) {
       sinServicios.hidden = false;
-      sinServicios.textContent = 'No hay servicios registrados para esta mascota.';
       return;
     }
 
@@ -113,12 +126,117 @@ async function seleccionarMascota(mascota) {
         : '-';
       tr.innerHTML = `
         <td>${fechaHora}</td>
-        <td>${escapeHtml(p.servicio || '-')}</td>
-        <td>${escapeHtml(p.groomer1 || '-')}</td>
+        <td>${esc(p.servicio || '-')}</td>
+        <td>${esc(p.groomer1 || '-')}</td>
       `;
       serviciosBody.appendChild(tr);
     });
   } catch {
     msg.innerHTML = '<span style="color:#f87171">Error de red al cargar servicios.</span>';
   }
+}
+
+// ===== EXCEL (CSV histórico) =====
+async function buscarExcel() {
+  const nombre = document.getElementById('nombreMascota').value.trim();
+  const msg = document.getElementById('serviciosMsg');
+  const mascotasList = document.getElementById('mascotasList');
+  const mascotasUl = document.getElementById('mascotasUl');
+  const pedidosList = document.getElementById('pedidosList');
+
+  msg.textContent = '';
+  mascotasList.hidden = true;
+  pedidosList.hidden = true;
+  mascotasUl.innerHTML = '';
+
+  if (!nombre) {
+    msg.innerHTML = '<span style="color:#f87171">Escribe el nombre de la mascota.</span>';
+    return;
+  }
+
+  try {
+    const resp = await fetch(`/api/historico/buscar-mascotas?nombre=${encodeURIComponent(nombre)}`);
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) {
+      msg.innerHTML = '<span style="color:#f87171">Error al buscar.</span>';
+      return;
+    }
+
+    const mascotas = data.data || [];
+    if (mascotas.length === 0) {
+      msg.innerHTML = '<span style="color:#9ca3af">No se encontraron mascotas con ese nombre en el histórico.</span>';
+      return;
+    }
+
+    mascotas.forEach((m) => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="mascota-nombre">${esc(m.nombre_mascota)}</span>
+        <span class="mascota-prop">Propietario: ${esc(m.nombre_propietario || '-')}</span>
+        <span class="mascota-tel mascota-tel-key">Tel: ${esc(m.telefono || '-')}</span>
+      `;
+      li.addEventListener('click', () => seleccionarExcel(m));
+      mascotasUl.appendChild(li);
+    });
+    mascotasList.hidden = false;
+    msg.innerHTML = `<span style="color:#34d399">${mascotas.length} mascota(s) encontrada(s) en histórico. Selecciona una.</span>`;
+  } catch {
+    msg.innerHTML = '<span style="color:#f87171">Error de red al buscar.</span>';
+  }
+}
+
+async function seleccionarExcel(mascota) {
+  const pedidosList = document.getElementById('pedidosList');
+  const pedidosLegend = document.getElementById('pedidosLegend');
+  const serviciosBody = document.getElementById('serviciosBody');
+  const sinServicios = document.getElementById('sinServicios');
+  const msg = document.getElementById('serviciosMsg');
+
+  document.getElementById('mascotasList').hidden = true;
+  pedidosList.hidden = false;
+  pedidosLegend.textContent = `Servicios (histórico) — ${mascota.nombre_mascota} (${mascota.nombre_propietario || '-'})`;
+  serviciosBody.innerHTML = '';
+  sinServicios.hidden = true;
+  msg.textContent = '';
+
+  try {
+    const resp = await fetch(`/api/historico/servicios?mascota=${encodeURIComponent(mascota.nombre_mascota)}&telefono=${encodeURIComponent(mascota.telefono)}`);
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) {
+      msg.innerHTML = '<span style="color:#f87171">Error al cargar servicios.</span>';
+      return;
+    }
+
+    const servicios = data.data || [];
+    if (servicios.length === 0) {
+      sinServicios.hidden = false;
+      return;
+    }
+
+    servicios.forEach((s) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${formatDateSafe(s.fecha)}</td>
+        <td>${esc(s.servicio || '-')}</td>
+      `;
+      serviciosBody.appendChild(tr);
+    });
+  } catch {
+    msg.innerHTML = '<span style="color:#f87171">Error de red al cargar servicios.</span>';
+  }
+}
+
+function formatDateSafe(val) {
+  if (!val) return '-';
+  const s = String(val);
+  const iso = s.length >= 10 ? s.slice(0, 10) : s;
+  const parts = iso.split('-');
+  if (parts.length !== 3) return s;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function esc(s) {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
 }
