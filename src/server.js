@@ -10,6 +10,7 @@ const {
   getPedidosPorFecha,
   searchMascotasByNombre, getPedidosPorMascota,
   insertGasto, getGastosPorFecha, updateGasto, deleteGasto,
+  getInicioCajaPorMetodo,
   insertBoutique, getBoutiquePorFecha, deleteBoutique,
   getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
 } = require('./db');
@@ -386,6 +387,20 @@ app.delete('/api/gastos/:id', async (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     console.error('Delete gasto error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+// -------- Inicio de Caja --------
+app.get('/api/cierre/inicio-caja', async (req, res) => {
+  try {
+    const antes = req.query.antes;
+    const piso = req.query.piso || '';
+    if (!antes) return res.status(400).json({ ok: false, errors: ['antes es requerido'] });
+    const detalle = await getInicioCajaPorMetodo(antes, piso);
+    res.json({ ok: true, data: detalle });
+  } catch (e) {
+    console.error('Inicio caja error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno'] });
   }
 });

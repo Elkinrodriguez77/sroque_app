@@ -84,6 +84,7 @@ async function consultarCierre() {
   const piso = document.getElementById('filtroPiso').value;
   const msg = document.getElementById('cierreMsg');
   msg.textContent = '';
+  document.getElementById('cierreReport').hidden = true;
 
   if (!desde || !hasta) { msg.textContent = 'Selecciona ambas fechas.'; return; }
   if (desde > hasta) { msg.textContent = '"Desde" no puede ser mayor que "Hasta".'; return; }
@@ -91,23 +92,26 @@ async function consultarCierre() {
   const pisoQ = piso ? `&piso=${encodeURIComponent(piso)}` : '';
 
   try {
-    const [resSpa, resBoutique, resGastos] = await Promise.all([
+    const [resSpa, resBoutique, resGastos, resInicio] = await Promise.all([
       fetch(`/api/dashboard/pedidos?desde=${desde}&hasta=${hasta}&estado=cerrados${pisoQ}`),
       fetch(`/api/boutique?desde=${desde}&hasta=${hasta}${pisoQ}`),
       fetch(`/api/gastos?desde=${desde}&hasta=${hasta}${pisoQ}`),
+      fetch(`/api/cierre/inicio-caja?antes=${desde}${pisoQ}`),
     ]);
 
     const dataSpa = await resSpa.json();
     const dataBoutique = await resBoutique.json();
     const dataGastos = await resGastos.json();
+    const dataInicio = await resInicio.json();
 
-    if (!dataSpa.ok || !dataBoutique.ok || !dataGastos.ok) {
+    if (!dataSpa.ok || !dataBoutique.ok || !dataGastos.ok || !dataInicio.ok) {
       msg.textContent = 'Error al consultar datos.';
       return;
     }
 
+    const inicioMap = dataInicio.data || {};
     renderBoutiqueList(dataBoutique.data || []);
-    buildCierreReport(dataSpa.data || [], dataBoutique.data || [], dataGastos.data || []);
+    buildCierreReport(dataSpa.data || [], dataBoutique.data || [], dataGastos.data || [], inicioMap);
   } catch {
     msg.textContent = 'Error de red al consultar.';
   }
@@ -146,7 +150,7 @@ function renderBoutiqueList(rows) {
   list.hidden = false;
 }
 
-function buildCierreReport(spaRows, boutiqueRows, gastosRows) {
+function buildCierreReport(spaRows, boutiqueRows, gastosRows, inicioMap) {
   const report = document.getElementById('cierreReport');
   const tbody = document.getElementById('cierreBody');
   const tfoot = document.getElementById('cierreFoot');
@@ -156,9 +160,16 @@ function buildCierreReport(spaRows, boutiqueRows, gastosRows) {
   const agg = {};
 
   function ensure(m) {
-    if (!agg[m]) agg[m] = { spa: 0, boutique: 0, gastos: 0 };
+    if (!agg[m]) agg[m] = { inicio: 0, spa: 0, boutique: 0, gastos: 0 };
   }
 
+  // Seed with inicio de caja data
+  for (const [m, vals] of Object.entries(inicioMap)) {
+    ensure(m);
+    agg[m].inicio = (Number(vals.spa) || 0) + (Number(vals.boutique) || 0) - (Number(vals.gastos) || 0);
+  }
+
+  // Period: SPA ingresos
   for (const r of spaRows) {
     const pf = Number(r.precio_final || 0);
     if (r.metodo_pago === 'Mixto' && r.metodo_pago_1 && r.metodo_pago_2) {
@@ -173,12 +184,14 @@ function buildCierreReport(spaRows, boutiqueRows, gastosRows) {
     }
   }
 
+  // Period: Boutique ingresos
   for (const b of boutiqueRows) {
     const m = b.metodo_pago || 'Sin especificar';
     ensure(m);
     agg[m].boutique += Number(b.monto || 0);
   }
 
+  // Period: Gastos
   for (const g of gastosRows) {
     const m = g.metodo_pago || 'Sin especificar';
     ensure(m);
@@ -186,55 +199,51 @@ function buildCierreReport(spaRows, boutiqueRows, gastosRows) {
   }
 
   const methods = Object.keys(agg).sort();
-  let totSpa = 0, totBoutique = 0, totGastos = 0;
+  let totInicio = 0, totSpa = 0, totBoutique = 0, totGastos = 0, totCierre = 0;
 
   for (const m of methods) {
     const d = agg[m];
-    const totalIng = d.spa + d.boutique;
-    const balance = totalIng - d.gastos;
+    const cierre = d.inicio + d.spa + d.boutique - d.gastos;
+    totInicio += d.inicio;
     totSpa += d.spa;
     totBoutique += d.boutique;
     totGastos += d.gastos;
+    totCierre += cierre;
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${m}</td>
+      <td class="${d.inicio >= 0 ? '' : 'txt-red'}">${fmt.format(d.inicio)}</td>
       <td>${fmt.format(d.spa)}</td>
       <td>${fmt.format(d.boutique)}</td>
-      <td>${fmt.format(totalIng)}</td>
       <td>${fmt.format(d.gastos)}</td>
-      <td class="${balance >= 0 ? 'txt-green' : 'txt-red'}"><strong>${fmt.format(balance)}</strong></td>
+      <td class="${cierre >= 0 ? 'txt-green' : 'txt-red'}"><strong>${fmt.format(cierre)}</strong></td>
     `;
     tbody.appendChild(tr);
   }
 
-  const totIngTotal = totSpa + totBoutique;
-  const totBalance = totIngTotal - totGastos;
-
   const trFoot = document.createElement('tr');
   trFoot.innerHTML = `
     <td><strong>TOTAL</strong></td>
+    <td><strong>${fmt.format(totInicio)}</strong></td>
     <td><strong>${fmt.format(totSpa)}</strong></td>
     <td><strong>${fmt.format(totBoutique)}</strong></td>
-    <td><strong>${fmt.format(totIngTotal)}</strong></td>
     <td><strong>${fmt.format(totGastos)}</strong></td>
-    <td class="${totBalance >= 0 ? 'txt-green' : 'txt-red'}"><strong>${fmt.format(totBalance)}</strong></td>
+    <td class="${totCierre >= 0 ? 'txt-green' : 'txt-red'}"><strong>${fmt.format(totCierre)}</strong></td>
   `;
   tfoot.appendChild(trFoot);
 
   const granTotal = document.getElementById('cierreGranTotal');
   granTotal.innerHTML = `
     <div class="cierre-label">CIERRE DE CAJA</div>
-    <div class="cierre-value ${totBalance >= 0 ? 'cierre-positive' : 'cierre-negative'}">${fmt.format(totBalance)}</div>
+    <div class="cierre-value ${totCierre >= 0 ? 'cierre-positive' : 'cierre-negative'}">${fmt.format(totCierre)}</div>
     <div class="cierre-detail">
-      Total Ingresos (SPA ${fmt.format(totSpa)} + Boutique ${fmt.format(totBoutique)}) &minus; Gastos ${fmt.format(totGastos)}
+      Inicio ${fmt.format(totInicio)}
+      + Ingresos SPA ${fmt.format(totSpa)}
+      + Boutique ${fmt.format(totBoutique)}
+      &minus; Gastos ${fmt.format(totGastos)}
     </div>
   `;
 
-  if (methods.length === 0) {
-    report.hidden = true;
-    document.getElementById('cierreMsg').textContent = 'No hay movimientos en el rango seleccionado.';
-  } else {
-    report.hidden = false;
-  }
+  report.hidden = false;
 }

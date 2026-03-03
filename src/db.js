@@ -586,6 +586,90 @@ async function deleteGasto(id) {
   return rows[0] || null;
 }
 
+// ----- Inicio de Caja (por método de pago) -----
+const INICIO_CAJA_DESDE = '2026-03-02';
+
+async function getInicioCajaPorMetodo(antesDeFecha, piso) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+
+  const pN = [INICIO_CAJA_DESDE, antesDeFecha];
+  let fN = '';
+  if (piso) { pN.push(piso); fN = ` AND p.piso = $${pN.length}`; }
+
+  const pM = [INICIO_CAJA_DESDE, antesDeFecha];
+  let fM = '';
+  if (piso) { pM.push(piso); fM = ` AND p.piso = $${pM.length}`; }
+
+  const pB = [INICIO_CAJA_DESDE, antesDeFecha];
+  let fB = '';
+  if (piso) { pB.push(piso); fB = ` AND piso = $${pB.length}`; }
+
+  const pG = [INICIO_CAJA_DESDE, antesDeFecha];
+  let fG = '';
+  if (piso) { pG.push(piso); fG = ` AND piso = $${pG.length}`; }
+
+  const [resSpaN, resSpaM, resBout, resGas] = await Promise.all([
+    pool.query(
+      `SELECT p.metodo_pago, SUM(COALESCE(p.precio,0) + COALESCE(p.adicionales_descuentos,0)) AS total
+       FROM ${schema}.pedidos p
+       WHERE COALESCE(p.cerrado, false) = true
+         AND (p.metodo_pago IS NULL OR p.metodo_pago != 'Mixto')
+         AND (p.fecha_hora AT TIME ZONE 'America/Bogota')::date >= $1::date
+         AND (p.fecha_hora AT TIME ZONE 'America/Bogota')::date < $2::date${fN}
+       GROUP BY p.metodo_pago`,
+      pN
+    ),
+    pool.query(
+      `SELECT p.metodo_pago_1, p.metodo_pago_2, p.monto_pago_1, p.monto_pago_2
+       FROM ${schema}.pedidos p
+       WHERE COALESCE(p.cerrado, false) = true
+         AND p.metodo_pago = 'Mixto'
+         AND (p.fecha_hora AT TIME ZONE 'America/Bogota')::date >= $1::date
+         AND (p.fecha_hora AT TIME ZONE 'America/Bogota')::date < $2::date${fM}`,
+      pM
+    ),
+    pool.query(
+      `SELECT metodo_pago, SUM(monto) AS total
+       FROM ${schema}.venta_boutique
+       WHERE fecha >= $1::date AND fecha < $2::date${fB}
+       GROUP BY metodo_pago`,
+      pB
+    ),
+    pool.query(
+      `SELECT metodo_pago, SUM(monto) AS total
+       FROM ${schema}.gastos
+       WHERE fecha >= $1::date AND fecha < $2::date${fG}
+       GROUP BY metodo_pago`,
+      pG
+    ),
+  ]);
+
+  const result = {};
+  function ensure(m) { if (!result[m]) result[m] = { spa: 0, boutique: 0, gastos: 0 }; }
+
+  for (const row of resSpaN.rows) {
+    const m = row.metodo_pago || 'Sin especificar';
+    ensure(m);
+    result[m].spa += Number(row.total);
+  }
+  for (const row of resSpaM.rows) {
+    if (row.metodo_pago_1) { ensure(row.metodo_pago_1); result[row.metodo_pago_1].spa += Number(row.monto_pago_1 || 0); }
+    if (row.metodo_pago_2) { ensure(row.metodo_pago_2); result[row.metodo_pago_2].spa += Number(row.monto_pago_2 || 0); }
+  }
+  for (const row of resBout.rows) {
+    const m = row.metodo_pago || 'Sin especificar';
+    ensure(m);
+    result[m].boutique += Number(row.total);
+  }
+  for (const row of resGas.rows) {
+    const m = row.metodo_pago || 'Sin especificar';
+    ensure(m);
+    result[m].gastos += Number(row.total);
+  }
+
+  return result;
+}
+
 // ----- Boutique -----
 async function insertBoutique(data) {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
@@ -631,6 +715,7 @@ module.exports = {
   getPedidosPorFecha,
   searchMascotasByNombre, getPedidosPorMascota,
   insertGasto, getGastosPorFecha, updateGasto, deleteGasto,
+  getInicioCajaPorMetodo,
   insertBoutique, getBoutiquePorFecha, deleteBoutique,
   getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
 };
