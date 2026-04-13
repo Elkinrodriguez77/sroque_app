@@ -36,6 +36,7 @@
     <section>
       <fieldset>
         <legend>Buscar pedidos por teléfono (propietario o acudiente)</legend>
+        <p class="hint">Se listan los pedidos de <strong>hoy</strong> (abiertos y cerrados) para poder corregir duplicados entre pisos.</p>
         <input id="filtroTelefono" type="tel" maxlength="20" placeholder="Ej: 3001234567" />
         <button id="btnBuscarPedidos" type="button" class="btn-primary">Buscar</button>
         <div id="pedidosMsg" class="pedidos-msg" aria-live="polite"></div>
@@ -75,6 +76,14 @@
         <label>Nombre de la mascota
           <input id="nombreMascota" name="nombre_mascota" type="text" maxlength="200" placeholder="Nombre" />
         </label>
+        <label>Tipo
+          <select id="tipoMascotaSelect" name="tipo_mascota">
+            <option value="">Seleccione...</option>
+            <option value="Perro">Perro</option>
+            <option value="Gato">Gato</option>
+          </select>
+        </label>
+        <p class="hint" style="margin:-8px 0 4px">El precio sugerido usa tipo + pelaje (manto corto vs medio/largo) + tamaño (solo perros).</p>
 
         <label>Raza
           <div class="searchable-select" id="razaWrapper">

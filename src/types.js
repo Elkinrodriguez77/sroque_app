@@ -88,6 +88,7 @@ function sanitizePedidoInput(input) {
     servicio: input.servicio ? String(input.servicio).trim() : '',
     mascota_id: input.mascota_id ? Number(input.mascota_id) || null : null,
     nombre_mascota: input.nombre_mascota ? String(input.nombre_mascota).trim() : undefined,
+    tipo_mascota: input.tipo_mascota === 'Perro' || input.tipo_mascota === 'Gato' ? input.tipo_mascota : undefined,
     precio: toNumberOrZero(input.precio),
     adicionales_descuentos: toNumberOrZero(input.adicionales_descuentos),
     metodo_pago: metodo,

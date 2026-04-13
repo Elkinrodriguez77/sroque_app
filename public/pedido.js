@@ -19,23 +19,37 @@ let MASCOTAS = [];
 
 let GROOMERS_LIST = [];
 
-// Tabla de precios sugeridos [servicio][pelaje_grupo][tamano] = precio
+/**
+ * Precios sugeridos (COP). Editar aquí para actualizar tarifas.
+ * - manto_corto: pelaje "Corto"
+ * - manto_medio_largo: pelaje "Medio" o "Largo"
+ * - perro: por tamaño (Minis…Gigantes). gato: fila única GATOS (ignora tamaño para el precio).
+ * Claves de servicio deben coincidir con #servicioSelect (SanRoquero, Rockstar, Superstar, Shanti Spa).
+ */
 const PRECIOS = {
-  'SanRoquero': {
-    corto:      { Minis: 65000, 'Pequeños': 78000,  Medianos: 91000,  Grandes: 103000, Gigantes: 116000 },
-    largo:      { Minis: 84000, 'Pequeños': 97000,  Medianos: 110000, Grandes: 129000, Gigantes: 218000 },
+  manto_corto: {
+    perro: {
+      Minis: { SanRoquero: 69000, Rockstar: 81000, Superstar: 103000, 'Shanti Spa': 166000 },
+      'Pequeños': { SanRoquero: 83000, Rockstar: 93000, Superstar: 117000, 'Shanti Spa': 180000 },
+      Medianos: { SanRoquero: 96000, Rockstar: 107000, Superstar: 129000, 'Shanti Spa': 194000 },
+      Grandes: { SanRoquero: 109000, Rockstar: 124000, Superstar: 152000, 'Shanti Spa': 218000 },
+      Gigantes: { SanRoquero: 123000, Rockstar: 138000, Superstar: 164000, 'Shanti Spa': 243000 },
+    },
+    gato: {
+      GATOS: { SanRoquero: 116000, Rockstar: 126000, Superstar: 148000, 'Shanti Spa': 212000 },
+    },
   },
-  'Rockstar': {
-    corto:      { Minis: 76000, 'Pequeños': 88000,  Medianos: 101000, Grandes: 117000, Gigantes: 130000 },
-    largo:      { Minis: 94000, 'Pequeños': 106000, Medianos: 125000, Grandes: 157000, Gigantes: 246000 },
-  },
-  'Superstar': {
-    corto:      { Minis: 97000,  'Pequeños': 110000, Medianos: 122000, Grandes: 143000, Gigantes: 155000 },
-    largo:      { Minis: 116000, 'Pequeños': 129000, Medianos: 145000, Grandes: 176000, Gigantes: 265000 },
-  },
-  'Shanti Spa': {
-    corto:      { Minis: 157000, 'Pequeños': 170000, Medianos: 183000, Grandes: 206000, Gigantes: 229000 },
-    largo:      { Minis: 175000, 'Pequeños': 188000, Medianos: 201000, Grandes: 232000, Gigantes: 308000 },
+  manto_medio_largo: {
+    perro: {
+      Minis: { SanRoquero: 89000, Rockstar: 100000, Superstar: 123000, 'Shanti Spa': 186000 },
+      'Pequeños': { SanRoquero: 103000, Rockstar: 112000, Superstar: 137000, 'Shanti Spa': 199000 },
+      Medianos: { SanRoquero: 117000, Rockstar: 133000, Superstar: 154000, 'Shanti Spa': 213000 },
+      Grandes: { SanRoquero: 137000, Rockstar: 166000, Superstar: 187000, 'Shanti Spa': 246000 },
+      Gigantes: { SanRoquero: 231000, Rockstar: 261000, Superstar: 281000, 'Shanti Spa': 326000 },
+    },
+    gato: {
+      GATOS: { SanRoquero: 136000, Rockstar: 156000, Superstar: 176000, 'Shanti Spa': 239000 },
+    },
   },
 };
 
@@ -148,17 +162,32 @@ function suggestPrice() {
   const servicio = document.getElementById('servicioSelect').value;
   const tamano = document.getElementById('tamanoSelect').value;
   const pelaje = document.getElementById('pelajeSelect').value;
+  const tipo = document.getElementById('tipoMascotaSelect').value;
   const hintEl = document.getElementById('precioSugerido');
   const precioInput = document.querySelector('#pedidoForm [name="precio"]');
 
-  if (!servicio || !tamano || !pelaje || !PRECIOS[servicio]) {
+  if (!servicio || servicio === 'OTRO' || !pelaje || !tipo) {
     hintEl.hidden = true;
     return;
   }
 
-  const grupo = pelaje === 'Corto' ? 'corto' : 'largo';
-  const tabla = PRECIOS[servicio]?.[grupo];
-  const precio = tabla?.[tamano];
+  const manto = pelaje === 'Corto' ? 'manto_corto' : 'manto_medio_largo';
+  const bloque = PRECIOS[manto]?.[tipo === 'Gato' ? 'gato' : 'perro'];
+  if (!bloque) {
+    hintEl.hidden = true;
+    return;
+  }
+
+  let precio;
+  if (tipo === 'Gato') {
+    precio = bloque.GATOS?.[servicio];
+  } else {
+    if (!tamano) {
+      hintEl.hidden = true;
+      return;
+    }
+    precio = bloque[tamano]?.[servicio];
+  }
 
   if (precio == null) {
     hintEl.hidden = true;
@@ -166,7 +195,8 @@ function suggestPrice() {
   }
 
   const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
-  hintEl.textContent = `Precio sugerido: ${fmt.format(precio)} (${servicio} · ${tamano} · ${pelaje})`;
+  const tamTxt = tipo === 'Gato' ? 'Gato' : tamano;
+  hintEl.textContent = `Precio sugerido: ${fmt.format(precio)} (${servicio} · ${tipo} · ${tamTxt} · ${pelaje === 'Corto' ? 'Manto corto' : 'Manto medio/largo'})`;
   hintEl.hidden = false;
 
   if (Number(precioInput.value) === 0) {
@@ -318,9 +348,9 @@ async function buscarPedidos() {
     }
   } catch { /* continue to pedidos search */ }
 
-  // Step 2: search existing open pedidos
+  // Step 2: pedidos del día (abiertos y cerrados) para poder eliminar duplicados
   try {
-    const resp = await fetch(`/api/pedidos?telefono=${encodeURIComponent(tel)}`);
+    const resp = await fetch(`/api/pedidos?telefono=${encodeURIComponent(tel)}&todos=1`);
     const body = await resp.json().catch(() => ({}));
     if (!resp.ok || !body.ok) {
       msg.innerHTML += ' <span style="color:#f87171">Error al buscar pedidos</span>';
@@ -331,12 +361,14 @@ async function buscarPedidos() {
       const noP = document.createElement('li');
       noP.className = 'pedido-meta';
       noP.style.padding = '10px 0';
-      noP.textContent = 'No hay pedidos abiertos del día para este teléfono.';
+      noP.textContent = 'No hay pedidos del día para este teléfono.';
       ul.appendChild(noP);
     }
     body.data.forEach((p) => {
+      const cerrado = !!p.cerrado;
       const li = document.createElement('li');
       li.className = 'pedido-item';
+      if (cerrado) li.classList.add('pedido-cerrado');
 
       const header = document.createElement('div');
       header.className = 'pedido-item-header';
@@ -346,8 +378,13 @@ async function buscarPedidos() {
       const right = document.createElement('span');
       right.className = 'badge';
       right.textContent = p.nombre_mascota || 'Sin nombre';
+      const badgeEstado = document.createElement('span');
+      badgeEstado.className = cerrado ? 'badge badge-inactive' : 'badge badge-active';
+      badgeEstado.style.marginLeft = '8px';
+      badgeEstado.textContent = cerrado ? 'Cerrado' : 'Abierto';
       header.appendChild(left);
       header.appendChild(right);
+      header.appendChild(badgeEstado);
 
       const meta = document.createElement('div');
       meta.className = 'pedido-meta';
@@ -357,24 +394,32 @@ async function buscarPedidos() {
         metodoTxt = `Mixto: ${p.metodo_pago_1} + ${p.metodo_pago_2}`;
       }
       const pisoTxt = p.piso ? ` · ${p.piso}` : '';
-      meta.textContent = `${fmt.format(total)} · ${metodoTxt}${pisoTxt} · Tel: ${p.telefono_propietario}`;
+      meta.textContent = `ID ${p.id} · ${fmt.format(total)} · ${metodoTxt}${pisoTxt} · Tel: ${p.telefono_propietario}`;
 
       const actions = document.createElement('div');
       actions.className = 'pedido-actions';
-      const btnEdit = document.createElement('button');
-      btnEdit.type = 'button';
-      btnEdit.textContent = 'Editar';
-      btnEdit.onclick = () => {
-        cargarPedidoEnFormulario(p);
-        document.querySelectorAll('.pedido-item.selected').forEach((n) => n.classList.remove('selected'));
-        li.classList.add('selected');
-      };
-      const btnClose = document.createElement('button');
-      btnClose.type = 'button';
-      btnClose.textContent = 'Cerrar';
-      btnClose.onclick = () => cerrarPedido(p.id);
-      actions.appendChild(btnEdit);
-      actions.appendChild(btnClose);
+      if (!cerrado) {
+        const btnEdit = document.createElement('button');
+        btnEdit.type = 'button';
+        btnEdit.textContent = 'Editar';
+        btnEdit.onclick = () => {
+          cargarPedidoEnFormulario(p);
+          document.querySelectorAll('.pedido-item.selected').forEach((n) => n.classList.remove('selected'));
+          li.classList.add('selected');
+        };
+        const btnClose = document.createElement('button');
+        btnClose.type = 'button';
+        btnClose.textContent = 'Cerrar';
+        btnClose.onclick = () => cerrarPedido(p.id);
+        actions.appendChild(btnEdit);
+        actions.appendChild(btnClose);
+      }
+      const btnDel = document.createElement('button');
+      btnDel.type = 'button';
+      btnDel.textContent = 'Eliminar';
+      btnDel.className = 'btn-danger';
+      btnDel.onclick = () => eliminarPedido(p);
+      actions.appendChild(btnDel);
 
       li.appendChild(header);
       li.appendChild(meta);
@@ -398,6 +443,13 @@ function cargarPedidoEnFormulario(p) {
   setRazaValue(p.raza || '');
   document.getElementById('tamanoSelect').value = normalizeTamano(p.tamano || '');
   document.getElementById('pelajeSelect').value = p.pelaje || '';
+  const tipoSel = document.getElementById('tipoMascotaSelect');
+  if (p.mascota_id) {
+    const m = MASCOTAS.find((x) => String(x.id) === String(p.mascota_id));
+    tipoSel.value = (m && m.tipo_mascota) ? m.tipo_mascota : '';
+  } else {
+    tipoSel.value = '';
+  }
   document.getElementById('servicioSelect').value = p.servicio || '';
   onServicioChange();
 
@@ -421,6 +473,7 @@ function cargarPedidoEnFormulario(p) {
   document.getElementById('groomer2Select').value = p.groomer2 || '';
   updateMoney();
   document.getElementById('precioSugerido').hidden = true;
+  suggestPrice();
 }
 
 function prefillPhones() {
@@ -457,13 +510,52 @@ async function cargarMascotasPorTelefono() {
 
 function onMascotaChange() {
   const id = document.getElementById('mascotaSelect').value;
-  if (!id) return;
+  const tipoSel = document.getElementById('tipoMascotaSelect');
+  if (!id) {
+    tipoSel.value = '';
+    suggestPrice();
+    return;
+  }
   const m = MASCOTAS.find((x) => String(x.id) === String(id));
   if (!m) return;
   document.getElementById('nombreMascota').value = m.nombre_mascota || '';
   setRazaValue(m.raza || '');
   document.getElementById('tamanoSelect').value = normalizeTamano(m.tamano || '');
   document.getElementById('pelajeSelect').value = m.pelaje || '';
+  tipoSel.value = m.tipo_mascota || '';
+  suggestPrice();
+}
+
+async function eliminarPedido(p) {
+  const msg = document.getElementById('pedidosMsg');
+  const cerrado = !!p.cerrado;
+  const texto = cerrado
+    ? 'Este pedido ya está CERRADO. Al eliminarlo se borra el registro en la base de datos: dejará de contar en reportes, dashboard y cierre de caja. ¿Continuar?'
+    : '¿Eliminar este pedido de forma permanente? No se puede deshacer.';
+  if (!window.confirm(texto)) return;
+  try {
+    const resp = await fetch(`/api/pedidos/${p.id}`, { method: 'DELETE' });
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok || !body.ok) {
+      msg.innerHTML = `<span style="color:#f87171">${(body?.errors?.join(', ')) || 'No se pudo eliminar'}</span>`;
+      return;
+    }
+    const form = document.getElementById('pedidoForm');
+    if (String(form.elements['id'].value || '') === String(p.id)) {
+      form.reset();
+      form.elements['id'].value = '';
+      setRazaValue('');
+      updateMoney();
+      document.getElementById('precioSugerido').hidden = true;
+      document.getElementById('mixtoWrapper').hidden = true;
+      document.getElementById('adicInfoPopup').hidden = true;
+      document.querySelectorAll('.pedido-item.selected').forEach((n) => n.classList.remove('selected'));
+    }
+    await buscarPedidos();
+    msg.innerHTML = '<span style="color:#34d399">Pedido eliminado.</span>';
+  } catch {
+    msg.innerHTML = '<span style="color:#f87171">Error de red al eliminar</span>';
+  }
 }
 
 async function cerrarPedido(id) {
@@ -544,6 +636,7 @@ function init() {
   document.getElementById('servicioSelect').addEventListener('change', onServicioChange);
   document.getElementById('tamanoSelect').addEventListener('change', suggestPrice);
   document.getElementById('pelajeSelect').addEventListener('change', suggestPrice);
+  document.getElementById('tipoMascotaSelect').addEventListener('change', suggestPrice);
   document.getElementById('pedidoForm').addEventListener('submit', submitPedido);
   document.getElementById('btnBuscarPedidos').addEventListener('click', buscarPedidos);
   document.getElementById('pedidoForm').elements['precio'].addEventListener('input', updateMoney);

@@ -106,13 +106,15 @@ button[type="button"]:hover { background: #4b5563; color: #f9fafb; }
 }
 .pedido-item:hover { border-color: #6366f1; }
 .pedido-item-header {
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+  gap: 4px 8px;
   font-weight: 600; color: #e5e7eb;
 }
 .pedido-meta { font-size: 0.85rem; color: #9ca3af; }
-.pedido-actions { display: flex; gap: 8px; margin-top: 4px; }
+.pedido-actions { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
 .pedido-actions button { font-size: 0.85rem; padding: 6px 14px; }
 .pedido-item.selected { border-color: #34d399; background: rgba(52,211,153,0.06); }
+.pedido-item.pedido-cerrado { border-style: dashed; opacity: 0.95; }
 .badge {
   padding: 3px 10px; border-radius: 999px;
   background: rgba(99,102,241,0.15); color: #a5b4fc;

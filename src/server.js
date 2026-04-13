@@ -5,7 +5,7 @@ require('./env');
 
 const {
   insertCliente, ping, findClienteByTelefono, updateCliente,
-  getRazasTamano, findPedidosHoyPorTelefono, insertPedido, updatePedido,
+  getRazasTamano, findPedidosHoyPorTelefono, findPedidosHoyTodosPorTelefono, insertPedido, updatePedido, deletePedido,
   getMascotasByTelefono, replaceMascotasForTelefono, upsertMascotaBasica, cerrarPedido,
   getPedidosPorFecha,
   searchMascotasByNombre, getPedidosPorMascota,
@@ -161,7 +161,8 @@ app.get('/api/pedidos', async (req, res) => {
   try {
     const tel = String(req.query.telefono || '').trim();
     if (!tel) return res.status(400).json({ ok: false, errors: ['telefono es requerido'] });
-    const rows = await findPedidosHoyPorTelefono(tel);
+    const todos = String(req.query.todos || '') === '1' || String(req.query.todos || '').toLowerCase() === 'true';
+    const rows = todos ? await findPedidosHoyTodosPorTelefono(tel) : await findPedidosHoyPorTelefono(tel);
     res.json({ ok: true, data: rows });
   } catch (e) {
     console.error('Get pedidos error:', e);
@@ -179,6 +180,7 @@ app.post('/api/pedidos', async (req, res) => {
         telefono_propietario: sanitized.telefono_propietario,
         mascota_id: sanitized.mascota_id, nombre_mascota: sanitized.nombre_mascota,
         raza: sanitized.raza, tamano: sanitized.tamano, pelaje: sanitized.pelaje,
+        tipo_mascota: sanitized.tipo_mascota,
       });
       if (m) {
         sanitized.mascota_id = m.id; sanitized.nombre_mascota = m.nombre_mascota;
@@ -205,6 +207,7 @@ app.put('/api/pedidos/:id', async (req, res) => {
         telefono_propietario: sanitized.telefono_propietario,
         mascota_id: sanitized.mascota_id, nombre_mascota: sanitized.nombre_mascota,
         raza: sanitized.raza, tamano: sanitized.tamano, pelaje: sanitized.pelaje,
+        tipo_mascota: sanitized.tipo_mascota,
       });
       if (m) {
         sanitized.mascota_id = m.id; sanitized.nombre_mascota = m.nombre_mascota;
@@ -227,6 +230,19 @@ app.get('/api/mascotas', async (req, res) => {
     res.json({ ok: true, data: mascotas });
   } catch (e) {
     console.error('Get mascotas error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
+  }
+});
+
+app.delete('/api/pedidos/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
+    const deleted = await deletePedido(id);
+    if (!deleted) return res.status(404).json({ ok: false, errors: ['Pedido no encontrado'] });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Delete pedido error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
   }
 });

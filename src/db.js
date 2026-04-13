@@ -227,6 +227,28 @@ async function findPedidosHoyPorTelefono(telefono) {
   return rows;
 }
 
+/** Pedidos del día (Bogotá) para un teléfono: abiertos y cerrados (para revisar duplicados). */
+async function findPedidosHoyTodosPorTelefono(telefono) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `SELECT * FROM ${schema}.pedidos
+     WHERE (fecha_hora AT TIME ZONE 'America/Bogota')::date = (NOW() AT TIME ZONE 'America/Bogota')::date
+       AND ($1 = telefono_propietario OR $1 = telefono_acudiente)
+     ORDER BY fecha_hora DESC`,
+    [telefono]
+  );
+  return rows;
+}
+
+async function deletePedido(id) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `DELETE FROM ${schema}.pedidos WHERE id = $1 RETURNING id`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
 async function cerrarPedido(id) {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
   const { rows } = await pool.query(
@@ -375,7 +397,7 @@ async function findMascotaByTelefonoAndNombre(telefono, nombre) {
   return rows[0] || null;
 }
 
-async function upsertMascotaBasica({ telefono_propietario, mascota_id, nombre_mascota, raza, tamano, pelaje }) {
+async function upsertMascotaBasica({ telefono_propietario, mascota_id, nombre_mascota, raza, tamano, pelaje, tipo_mascota }) {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
   if (!telefono_propietario || !nombre_mascota) return null;
 
@@ -384,10 +406,11 @@ async function upsertMascotaBasica({ telefono_propietario, mascota_id, nombre_ma
       `UPDATE ${schema}.mascotas
        SET raza = COALESCE($2, raza),
            tamano = COALESCE($3, tamano),
-           pelaje = COALESCE($4, pelaje)
+           pelaje = COALESCE($4, pelaje),
+           tipo_mascota = COALESCE($5, tipo_mascota)
        WHERE id = $1
        RETURNING *`,
-      [mascota_id, raza || null, tamano || null, pelaje || null]
+      [mascota_id, raza || null, tamano || null, pelaje || null, tipo_mascota || null]
     );
     return rows[0] || null;
   }
@@ -398,10 +421,11 @@ async function upsertMascotaBasica({ telefono_propietario, mascota_id, nombre_ma
       `UPDATE ${schema}.mascotas
        SET raza = COALESCE($2, raza),
            tamano = COALESCE($3, tamano),
-           pelaje = COALESCE($4, pelaje)
+           pelaje = COALESCE($4, pelaje),
+           tipo_mascota = COALESCE($5, tipo_mascota)
        WHERE id = $1
        RETURNING *`,
-      [existing.id, raza || null, tamano || null, pelaje || null]
+      [existing.id, raza || null, tamano || null, pelaje || null, tipo_mascota || null]
     );
     return rows[0] || null;
   }
@@ -412,10 +436,11 @@ async function upsertMascotaBasica({ telefono_propietario, mascota_id, nombre_ma
        nombre_mascota,
        raza,
        tamano,
-       pelaje
-     ) VALUES ($1,$2,$3,$4,$5)
+       pelaje,
+       tipo_mascota
+     ) VALUES ($1,$2,$3,$4,$5,$6)
      RETURNING *`,
-    [telefono_propietario, nombre_mascota, raza || null, tamano || null, pelaje || null]
+    [telefono_propietario, nombre_mascota, raza || null, tamano || null, pelaje || null, tipo_mascota || null]
   );
   return rows[0];
 }
@@ -709,7 +734,7 @@ async function deleteBoutique(id) {
 module.exports = {
   pool, ping,
   insertCliente, findClienteByTelefono, updateCliente,
-  insertPedido, updatePedido, findPedidosHoyPorTelefono,
+  insertPedido, updatePedido, findPedidosHoyPorTelefono, findPedidosHoyTodosPorTelefono, deletePedido,
   getRazasTamano, getMascotasByTelefono, replaceMascotasForTelefono,
   upsertMascotaBasica, cerrarPedido,
   getPedidosPorFecha,
