@@ -18,7 +18,7 @@ config/.env.*
 Imagenes/
 
 # fotos de mascotas subidas desde pedidos (data local del servidor)
-data/uploads/
+# data/uploads/
 
 # sistema
 .DS_Store
