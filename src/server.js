@@ -102,12 +102,15 @@ app.get('/api/me', (req, res) => {
   res.status(401).json({ ok: false });
 });
 
-// --- Todo lo demás requiere autenticación ---
-app.use(requireAuth);
+// Fotos de referencia: lectura pública por URL (nombre tipo UUID); <img> no siempre manda sesión como la barra del navegador.
+// La subida sigue protegida en POST /api/mascotas/:id/foto (debajo de requireAuth).
 app.use(
   '/uploads/mascotas',
   express.static(UPLOAD_MASCOTAS_DIR, { maxAge: 7 * 24 * 60 * 60 * 1000, index: false })
 );
+
+// --- Todo lo demás requiere autenticación ---
+app.use(requireAuth);
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
