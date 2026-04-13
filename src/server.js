@@ -1,5 +1,9 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
+const { unlink } = require('fs/promises');
+const { randomUUID } = require('crypto');
+const multer = require('multer');
 const session = require('express-session');
 require('./env');
 
@@ -7,6 +11,7 @@ const {
   insertCliente, ping, findClienteByTelefono, updateCliente,
   getRazasTamano, findPedidosHoyPorTelefono, findPedidosHoyTodosPorTelefono, insertPedido, updatePedido, deletePedido,
   getMascotasByTelefono, replaceMascotasForTelefono, upsertMascotaBasica, cerrarPedido,
+  getMascotaById, updateMascotaFotoReferencia,
   getPedidosPorFecha,
   searchMascotasByNombre, getPedidosPorMascota,
   insertGasto, getGastosPorFecha, updateGasto, deleteGasto,
@@ -16,9 +21,25 @@ const {
 } = require('./db');
 const { sanitizeClienteInput, validateCliente, sanitizePedidoInput, validatePedido, sanitizeGastoInput, validateGasto } = require('./types');
 const { findUserByUsername, verifyPassword, requireAuth, loginRateLimiter, recordFailedAttempt, clearAttempts } = require('./auth');
+const { MAX_UPLOAD_BYTES, isAllowedMime, procesarBufferAWebp } = require('./mascotaFoto');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
+
+const UPLOAD_MASCOTAS_DIR = path.join(__dirname, '..', 'data', 'uploads', 'mascotas');
+fs.mkdirSync(UPLOAD_MASCOTAS_DIR, { recursive: true });
+
+function mascotasConFotoUrl(rows) {
+  return (rows || []).map((m) => ({
+    ...m,
+    foto_url: m.foto_referencia ? `/uploads/mascotas/${encodeURIComponent(m.foto_referencia)}` : null,
+  }));
+}
+
+const uploadMascotaMem = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_UPLOAD_BYTES },
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -83,6 +104,10 @@ app.get('/api/me', (req, res) => {
 
 // --- Todo lo demás requiere autenticación ---
 app.use(requireAuth);
+app.use(
+  '/uploads/mascotas',
+  express.static(UPLOAD_MASCOTAS_DIR, { maxAge: 7 * 24 * 60 * 60 * 1000, index: false })
+);
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
@@ -113,7 +138,7 @@ app.get('/api/clientes', async (req, res) => {
     if (!tel) return res.status(400).json({ ok: false, errors: ['telefono es requerido'] });
     const cliente = await findClienteByTelefono(tel);
     if (!cliente) return res.status(404).json({ ok: false, data: null });
-    const mascotas = await getMascotasByTelefono(tel);
+    const mascotas = mascotasConFotoUrl(await getMascotasByTelefono(tel));
     res.json({ ok: true, data: { ...cliente, mascotas } });
   } catch (e) {
     console.error('Lookup cliente error:', e);
@@ -188,7 +213,11 @@ app.post('/api/pedidos', async (req, res) => {
       }
     }
     const created = await insertPedido(sanitized);
-    res.status(201).json({ ok: true, id: created.id });
+    res.status(201).json({
+      ok: true,
+      id: created.id,
+      mascota_id: sanitized.mascota_id || null,
+    });
   } catch (e) {
     console.error('Insert pedido error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
@@ -215,7 +244,11 @@ app.put('/api/pedidos/:id', async (req, res) => {
       }
     }
     const updated = await updatePedido(id, sanitized);
-    res.json({ ok: true, id: updated.id });
+    res.json({
+      ok: true,
+      id: updated.id,
+      mascota_id: sanitized.mascota_id || null,
+    });
   } catch (e) {
     console.error('Update pedido error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
@@ -226,11 +259,82 @@ app.get('/api/mascotas', async (req, res) => {
   try {
     const tel = String(req.query.telefono || '').trim();
     if (!tel) return res.status(400).json({ ok: false, errors: ['telefono es requerido'] });
-    const mascotas = await getMascotasByTelefono(tel);
+    const mascotas = mascotasConFotoUrl(await getMascotasByTelefono(tel));
     res.json({ ok: true, data: mascotas });
   } catch (e) {
     console.error('Get mascotas error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
+  }
+});
+
+app.post(
+  '/api/mascotas/:id/foto',
+  (req, res, next) => {
+    uploadMascotaMem.single('foto')(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ ok: false, errors: ['El archivo es demasiado grande (máx. 6 MB antes de optimizar)'] });
+        }
+        return res.status(400).json({ ok: false, errors: ['Error al subir el archivo'] });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
+      if (!req.file || !req.file.buffer) {
+        return res.status(400).json({ ok: false, errors: ['Selecciona un archivo de imagen'] });
+      }
+      if (!isAllowedMime(req.file.mimetype)) {
+        return res.status(400).json({ ok: false, errors: ['Solo se permiten imágenes JPEG, PNG o WebP'] });
+      }
+      const m = await getMascotaById(id);
+      if (!m) return res.status(404).json({ ok: false, errors: ['Mascota no encontrada'] });
+      let webpBuf;
+      try {
+        webpBuf = await procesarBufferAWebp(req.file.buffer);
+      } catch (e) {
+        console.error('Procesar foto mascota:', e);
+        return res.status(400).json({ ok: false, errors: ['No se pudo procesar la imagen. Probá con otra foto.'] });
+      }
+      const newName = `${randomUUID()}.webp`;
+      const dest = path.join(UPLOAD_MASCOTAS_DIR, newName);
+      await fs.promises.writeFile(dest, webpBuf);
+      if (m.foto_referencia) {
+        try {
+          await unlink(path.join(UPLOAD_MASCOTAS_DIR, m.foto_referencia));
+        } catch { /* archivo previo ya no existe */ }
+      }
+      await updateMascotaFotoReferencia(id, newName);
+      res.json({
+        ok: true,
+        foto_url: `/uploads/mascotas/${encodeURIComponent(newName)}`,
+      });
+    } catch (e) {
+      console.error('Subir foto mascota:', e);
+      res.status(500).json({ ok: false, errors: ['Error al guardar la foto'] });
+    }
+  }
+);
+
+app.delete('/api/mascotas/:id/foto', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
+    const m = await getMascotaById(id);
+    if (!m) return res.status(404).json({ ok: false, errors: ['Mascota no encontrada'] });
+    if (m.foto_referencia) {
+      try {
+        await unlink(path.join(UPLOAD_MASCOTAS_DIR, m.foto_referencia));
+      } catch { /* */ }
+    }
+    await updateMascotaFotoReferencia(id, null);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Eliminar foto mascota:', e);
+    res.status(500).json({ ok: false, errors: ['Error al eliminar la foto'] });
   }
 });
 
@@ -277,7 +381,6 @@ app.get('/api/dashboard/pedidos', async (req, res) => {
 });
 
 // -------- Histórico CSV (datos Excel) --------
-const fs = require('fs');
 let csvHistorico = [];
 (function loadCSV() {
   try {

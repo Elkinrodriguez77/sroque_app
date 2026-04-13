@@ -221,6 +221,30 @@
         </label>
       </fieldset>
 
+      <fieldset id="mascotaFotoFieldset">
+        <legend>Foto de referencia (post-servicio)</legend>
+        <p class="hint mascota-foto-hint">
+          Queda guardada en la <strong>mascota</strong> para próximos pedidos. El sistema la optimiza automático (WebP, máx. ~1280 px de lado).
+          Formatos: JPEG, PNG o WebP. Tamaño máximo al subir: <strong>6 MB</strong> (ideal: buena luz, mascota centrada, sin recortar la cara).
+        </p>
+        <div id="mascotaFotoWrap" class="mascota-foto-wrap" hidden>
+          <div class="mascota-foto-preview-frame" id="mascotaFotoPreviewFrame" aria-hidden="true">
+            <img id="mascotaFotoPreview" class="mascota-foto-preview" alt="Foto de referencia de la mascota" decoding="async" hidden />
+          </div>
+        </div>
+        <div class="mascota-foto-actions mascota-foto-actions-row">
+          <button type="button" class="btn-primary" id="btnAmpliarFoto" hidden>Ver foto en grande</button>
+        </div>
+        <label class="file-label">
+          Subir o reemplazar foto
+          <input type="file" id="mascotaFotoInput" accept="image/jpeg,image/png,image/webp" />
+        </label>
+        <div class="mascota-foto-actions">
+          <button type="button" class="btn-secondary" id="btnQuitarFotoSeleccion" hidden>Quitar archivo seleccionado</button>
+          <button type="button" class="btn-secondary" id="btnEliminarFotoGuardada" hidden>Eliminar foto guardada</button>
+        </div>
+      </fieldset>
+
       <label class="checkbox-label">
         <input type="checkbox" name="acepta_terminos" id="aceptaTerminos" required />
         <span>Acepta términos y condiciones de pedido</span>
@@ -232,6 +256,16 @@
     </form>
   </main>
   <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
+
+  <div id="mascotaFotoLightbox" class="foto-lightbox" hidden role="dialog" aria-modal="true" aria-label="Foto ampliada">
+    <div class="foto-lightbox-backdrop" id="mascotaFotoLightboxBackdrop" aria-hidden="true"></div>
+    <button type="button" class="foto-lightbox-close" id="mascotaFotoLightboxClose" aria-label="Cerrar">&times;</button>
+    <div class="foto-lightbox-content">
+      <img id="mascotaFotoLightboxImg" class="foto-lightbox-img" alt="" />
+      <p id="mascotaFotoLightboxError" class="foto-lightbox-error" hidden>No se pudo cargar la imagen.</p>
+    </div>
+  </div>
+
   <script src="/pedido.js" defer></script>
 </body>
 </html>

@@ -16,6 +16,7 @@ document.getElementById('btnLogout')?.addEventListener('click', async () => {
 let RAZAS = [];
 let RAZA_TAMANO = {};
 let MASCOTAS = [];
+let fotoPreviewObjectUrl = null;
 
 let GROOMERS_LIST = [];
 
@@ -241,9 +242,122 @@ function toggleInfoPopup() {
   popup.hidden = !popup.hidden;
 }
 
+function revokeFotoPreviewObjectUrl() {
+  if (fotoPreviewObjectUrl) {
+    URL.revokeObjectURL(fotoPreviewObjectUrl);
+    fotoPreviewObjectUrl = null;
+  }
+}
+
+function refreshMascotaFotoPreview() {
+  const input = document.getElementById('mascotaFotoInput');
+  const wrap = document.getElementById('mascotaFotoWrap');
+  const img = document.getElementById('mascotaFotoPreview');
+  const btnAmpliar = document.getElementById('btnAmpliarFoto');
+  const btnQuitar = document.getElementById('btnQuitarFotoSeleccion');
+  const btnEliminar = document.getElementById('btnEliminarFotoGuardada');
+  const selId = document.getElementById('mascotaSelect').value;
+
+  revokeFotoPreviewObjectUrl();
+
+  if (input.files && input.files[0]) {
+    fotoPreviewObjectUrl = URL.createObjectURL(input.files[0]);
+    img.src = fotoPreviewObjectUrl;
+    img.hidden = false;
+    wrap.hidden = false;
+    btnAmpliar.hidden = false;
+    btnQuitar.hidden = false;
+    btnEliminar.hidden = true;
+    return;
+  }
+
+  btnQuitar.hidden = true;
+
+  if (!selId) {
+    img.removeAttribute('src');
+    img.hidden = true;
+    wrap.hidden = true;
+    btnAmpliar.hidden = true;
+    btnEliminar.hidden = true;
+    return;
+  }
+
+  const m = MASCOTAS.find((x) => String(x.id) === String(selId));
+  if (m && m.foto_url) {
+    img.src = `${m.foto_url}?v=${encodeURIComponent(m.foto_referencia || String(m.id))}`;
+    img.hidden = false;
+    wrap.hidden = false;
+    btnAmpliar.hidden = false;
+    btnEliminar.hidden = false;
+  } else {
+    img.removeAttribute('src');
+    img.hidden = true;
+    wrap.hidden = true;
+    btnAmpliar.hidden = true;
+    btnEliminar.hidden = true;
+  }
+}
+
+function getMascotaFotoPreviewSrc() {
+  const img = document.getElementById('mascotaFotoPreview');
+  if (!img || img.hidden || !img.getAttribute('src')) return null;
+  return img.src;
+}
+
+function abrirFotoLightbox() {
+  const src = getMascotaFotoPreviewSrc();
+  if (!src) return;
+  const lb = document.getElementById('mascotaFotoLightbox');
+  const lbImg = document.getElementById('mascotaFotoLightboxImg');
+  const errEl = document.getElementById('mascotaFotoLightboxError');
+  errEl.hidden = true;
+  lbImg.onload = () => { errEl.hidden = true; };
+  lbImg.onerror = () => { errEl.hidden = false; };
+  lb.hidden = false;
+  document.body.style.overflow = 'hidden';
+  lbImg.src = src;
+  const closeBtn = document.getElementById('mascotaFotoLightboxClose');
+  if (closeBtn) queueMicrotask(() => closeBtn.focus());
+}
+
+function cerrarFotoLightbox() {
+  const lb = document.getElementById('mascotaFotoLightbox');
+  const lbImg = document.getElementById('mascotaFotoLightboxImg');
+  const errEl = document.getElementById('mascotaFotoLightboxError');
+  lbImg.onload = null;
+  lbImg.onerror = null;
+  lbImg.removeAttribute('src');
+  if (errEl) errEl.hidden = true;
+  lb.hidden = true;
+  document.body.style.overflow = '';
+}
+
+async function eliminarFotoGuardadaMascota() {
+  const id = document.getElementById('mascotaSelect').value;
+  const errorsEl = document.getElementById('pedidoErrors');
+  if (!id) return;
+  if (!window.confirm('¿Eliminar la foto de referencia guardada para esta mascota? El pedido no se borra.')) return;
+  try {
+    const resp = await fetch(`/api/mascotas/${id}/foto`, { method: 'DELETE' });
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok || !body.ok) {
+      errorsEl.textContent = (body.errors && body.errors.join(', ')) || 'No se pudo eliminar la foto';
+      return;
+    }
+    errorsEl.textContent = '';
+    await cargarMascotasPorTelefono();
+    document.getElementById('mascotaSelect').value = id;
+    refreshMascotaFotoPreview();
+  } catch {
+    errorsEl.textContent = 'Error de red al eliminar la foto';
+  }
+}
+
 async function submitPedido(event) {
   event.preventDefault();
   const form = event.currentTarget;
+  const fotoInput = document.getElementById('mascotaFotoInput');
+  const fotoFile = fotoInput.files && fotoInput.files[0] ? fotoInput.files[0] : null;
   const data = Object.fromEntries(new FormData(form).entries());
   const errorsEl = document.getElementById('pedidoErrors');
   errorsEl.textContent = '';
@@ -309,12 +423,42 @@ async function submitPedido(event) {
       errorsEl.textContent = (body?.errors?.join(', ')) || 'Error al guardar pedido';
       return;
     }
+
+    const keepTel = data.telefono_propietario || '';
+    const keepAcud = data.telefono_acudiente || '';
+    const mascotaIdParaFoto = body.mascota_id || null;
+
     form.reset();
     setRazaValue('');
     document.getElementById('precioSugerido').hidden = true;
     document.getElementById('mixtoWrapper').hidden = true;
     document.getElementById('adicInfoPopup').hidden = true;
+
+    form.elements['telefono_propietario'].value = keepTel;
+    form.elements['telefono_acudiente'].value = keepAcud;
+
     await buscarPedidos();
+
+    if (fotoFile && mascotaIdParaFoto) {
+      const fd = new FormData();
+      fd.append('foto', fotoFile);
+      try {
+        const up = await fetch(`/api/mascotas/${mascotaIdParaFoto}/foto`, { method: 'POST', body: fd });
+        const upBody = await up.json().catch(() => ({}));
+        if (!up.ok || !upBody.ok) {
+          errorsEl.textContent = `Pedido guardado. La foto no se subió: ${(upBody.errors && upBody.errors.join(', ')) || 'error'}`;
+        }
+      } catch {
+        errorsEl.textContent = 'Pedido guardado. Error de red al subir la foto; podés intentar de nuevo en el próximo pedido.';
+      }
+    }
+
+    await cargarMascotasPorTelefono();
+    if (mascotaIdParaFoto) {
+      document.getElementById('mascotaSelect').value = String(mascotaIdParaFoto);
+    }
+    fotoInput.value = '';
+    refreshMascotaFotoPreview();
   } catch {
     errorsEl.textContent = 'Error de red al guardar pedido';
   }
@@ -328,25 +472,26 @@ async function buscarPedidos() {
   msg.textContent = '';
   if (!tel) { msg.innerHTML = '<span style="color:#f87171">Ingrese un teléfono</span>'; return; }
 
-  // Step 1: lookup client and prefill data (like Clientes page → Registrar pedido)
+  // Step 1: prellenar teléfono, buscar cliente y siempre recargar mascotas (incl. foto) desde el API
+  const form = document.getElementById('pedidoForm');
+  form.elements['telefono_propietario'].value = tel;
+  form.elements['telefono_acudiente'].value = '';
   try {
     const clientResp = await fetch(`/api/clientes?telefono=${encodeURIComponent(tel)}`);
     if (clientResp.ok) {
       const clientBody = await clientResp.json();
       if (clientBody.ok && clientBody.data) {
         const c = clientBody.data;
-        const form = document.getElementById('pedidoForm');
         form.elements['telefono_propietario'].value = c.telefono_propietario || tel;
         form.elements['telefono_acudiente'].value = c.telefono_acudiente || '';
-        await cargarMascotasPorTelefono();
         const nombre = c.nombre_propietario || c.telefono_propietario;
         msg.innerHTML = `<span style="color:#34d399">Cliente encontrado: <strong>${nombre}</strong></span>`;
       }
-    } else {
-      document.querySelector('#pedidoForm [name="telefono_propietario"]').value = tel;
-      document.querySelector('#pedidoForm [name="telefono_acudiente"]').value = '';
     }
-  } catch { /* continue to pedidos search */ }
+  } catch { /* seguir sin cliente */ }
+  try {
+    await cargarMascotasPorTelefono();
+  } catch { /* */ }
 
   // Step 2: pedidos del día (abiertos y cerrados) para poder eliminar duplicados
   try {
@@ -402,8 +547,8 @@ async function buscarPedidos() {
         const btnEdit = document.createElement('button');
         btnEdit.type = 'button';
         btnEdit.textContent = 'Editar';
-        btnEdit.onclick = () => {
-          cargarPedidoEnFormulario(p);
+        btnEdit.onclick = async () => {
+          await cargarPedidoEnFormulario(p);
           document.querySelectorAll('.pedido-item.selected').forEach((n) => n.classList.remove('selected'));
           li.classList.add('selected');
         };
@@ -431,25 +576,17 @@ async function buscarPedidos() {
   }
 }
 
-function cargarPedidoEnFormulario(p) {
+async function cargarPedidoEnFormulario(p) {
   const form = document.getElementById('pedidoForm');
   form.elements['id'].value = p.id;
   form.elements['telefono_propietario'].value = p.telefono_propietario || '';
   form.elements['telefono_acudiente'].value = p.telefono_acudiente || '';
   form.elements['fecha_hora'].value = p.fecha_hora ? new Date(p.fecha_hora).toISOString().slice(0, 16) : '';
   form.elements['piso'].value = p.piso || '';
-  form.elements['mascota_id'].value = p.mascota_id || '';
   document.getElementById('nombreMascota').value = p.nombre_mascota || '';
   setRazaValue(p.raza || '');
   document.getElementById('tamanoSelect').value = normalizeTamano(p.tamano || '');
   document.getElementById('pelajeSelect').value = p.pelaje || '';
-  const tipoSel = document.getElementById('tipoMascotaSelect');
-  if (p.mascota_id) {
-    const m = MASCOTAS.find((x) => String(x.id) === String(p.mascota_id));
-    tipoSel.value = (m && m.tipo_mascota) ? m.tipo_mascota : '';
-  } else {
-    tipoSel.value = '';
-  }
   document.getElementById('servicioSelect').value = p.servicio || '';
   onServicioChange();
 
@@ -474,6 +611,19 @@ function cargarPedidoEnFormulario(p) {
   updateMoney();
   document.getElementById('precioSugerido').hidden = true;
   suggestPrice();
+
+  await cargarMascotasPorTelefono(true);
+  form.elements['mascota_id'].value = p.mascota_id || '';
+  const tipoSel = document.getElementById('tipoMascotaSelect');
+  if (p.mascota_id) {
+    const m = MASCOTAS.find((x) => String(x.id) === String(p.mascota_id));
+    tipoSel.value = (m && m.tipo_mascota) ? m.tipo_mascota : '';
+  } else {
+    tipoSel.value = '';
+  }
+
+  document.getElementById('mascotaFotoInput').value = '';
+  refreshMascotaFotoPreview();
 }
 
 function prefillPhones() {
@@ -488,7 +638,10 @@ function prefillPhones() {
   }
 }
 
-async function cargarMascotasPorTelefono() {
+/**
+ * @param {boolean} [skipRefresh] si true, no actualiza la vista de foto (usar cuando todavía vas a setear mascota_id).
+ */
+async function cargarMascotasPorTelefono(skipRefresh) {
   const tel = document.querySelector('#pedidoForm [name="telefono_propietario"]').value.trim();
   const sel = document.getElementById('mascotaSelect');
   sel.innerHTML = '<option value="">Nueva mascota / sin seleccionar</option>';
@@ -505,18 +658,26 @@ async function cargarMascotasPorTelefono() {
       opt.textContent = m.nombre_mascota || `Mascota ${m.id}`;
       sel.appendChild(opt);
     }
+    if (!skipRefresh) refreshMascotaFotoPreview();
   } catch { /* silent */ }
 }
 
-function onMascotaChange() {
+async function onMascotaChange() {
   const id = document.getElementById('mascotaSelect').value;
   const tipoSel = document.getElementById('tipoMascotaSelect');
+  document.getElementById('mascotaFotoInput').value = '';
   if (!id) {
     tipoSel.value = '';
     suggestPrice();
+    refreshMascotaFotoPreview();
     return;
   }
-  const m = MASCOTAS.find((x) => String(x.id) === String(id));
+  let m = MASCOTAS.find((x) => String(x.id) === String(id));
+  if (!m) {
+    await cargarMascotasPorTelefono(true);
+    document.getElementById('mascotaSelect').value = id;
+    m = MASCOTAS.find((x) => String(x.id) === String(id));
+  }
   if (!m) return;
   document.getElementById('nombreMascota').value = m.nombre_mascota || '';
   setRazaValue(m.raza || '');
@@ -524,6 +685,7 @@ function onMascotaChange() {
   document.getElementById('pelajeSelect').value = m.pelaje || '';
   tipoSel.value = m.tipo_mascota || '';
   suggestPrice();
+  refreshMascotaFotoPreview();
 }
 
 async function eliminarPedido(p) {
@@ -641,8 +803,30 @@ function init() {
   document.getElementById('btnBuscarPedidos').addEventListener('click', buscarPedidos);
   document.getElementById('pedidoForm').elements['precio'].addEventListener('input', updateMoney);
   document.getElementById('pedidoForm').elements['adicionales_descuentos'].addEventListener('input', updateMoney);
-  document.getElementById('pedidoForm').elements['telefono_propietario'].addEventListener('change', cargarMascotasPorTelefono);
-  document.getElementById('mascotaSelect').addEventListener('change', onMascotaChange);
+  const telPropietario = document.getElementById('pedidoForm').elements['telefono_propietario'];
+  telPropietario.addEventListener('change', () => { void cargarMascotasPorTelefono(); });
+  telPropietario.addEventListener('blur', () => {
+    if (telPropietario.value.trim()) void cargarMascotasPorTelefono();
+  });
+  document.getElementById('mascotaSelect').addEventListener('change', () => { void onMascotaChange(); });
+
+  document.getElementById('mascotaFotoLightboxBackdrop').addEventListener('click', cerrarFotoLightbox);
+  document.getElementById('mascotaFotoLightboxClose').addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    cerrarFotoLightbox();
+  });
+  document.getElementById('btnAmpliarFoto').addEventListener('click', (e) => {
+    e.preventDefault();
+    abrirFotoLightbox();
+  });
+  document.addEventListener('keydown', (e) => {
+    const lb = document.getElementById('mascotaFotoLightbox');
+    if (e.key === 'Escape' && lb && !lb.hidden) {
+      e.preventDefault();
+      cerrarFotoLightbox();
+    }
+  });
 
   // Mixto payment toggle
   document.getElementById('metodoPagoSelect').addEventListener('change', onMetodoPagoChange);
@@ -651,6 +835,13 @@ function init() {
 
   // Info popup toggle
   document.getElementById('adicInfoBtn').addEventListener('click', toggleInfoPopup);
+
+  document.getElementById('mascotaFotoInput').addEventListener('change', refreshMascotaFotoPreview);
+  document.getElementById('btnQuitarFotoSeleccion').addEventListener('click', () => {
+    document.getElementById('mascotaFotoInput').value = '';
+    refreshMascotaFotoPreview();
+  });
+  document.getElementById('btnEliminarFotoGuardada').addEventListener('click', eliminarFotoGuardadaMascota);
 
   prefillPhones();
   cargarMascotasPorTelefono();

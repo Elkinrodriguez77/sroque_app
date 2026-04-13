@@ -297,7 +297,8 @@ async function getMascotasByTelefono(telefono) {
        observaciones,
        raza,
        tamano,
-       pelaje
+       pelaje,
+       foto_referencia
      FROM ${schema}.mascotas
      WHERE telefono_propietario = $1
      ORDER BY id`,
@@ -443,6 +444,25 @@ async function upsertMascotaBasica({ telefono_propietario, mascota_id, nombre_ma
     [telefono_propietario, nombre_mascota, raza || null, tamano || null, pelaje || null, tipo_mascota || null]
   );
   return rows[0];
+}
+
+async function getMascotaById(id) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `SELECT id, telefono_propietario, nombre_mascota, foto_referencia
+     FROM ${schema}.mascotas WHERE id = $1 LIMIT 1`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+async function updateMascotaFotoReferencia(id, foto_referencia) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `UPDATE ${schema}.mascotas SET foto_referencia = $2 WHERE id = $1 RETURNING *`,
+    [id, foto_referencia]
+  );
+  return rows[0] || null;
 }
 
 // ----- Dashboard -----
@@ -736,7 +756,7 @@ module.exports = {
   insertCliente, findClienteByTelefono, updateCliente,
   insertPedido, updatePedido, findPedidosHoyPorTelefono, findPedidosHoyTodosPorTelefono, deletePedido,
   getRazasTamano, getMascotasByTelefono, replaceMascotasForTelefono,
-  upsertMascotaBasica, cerrarPedido,
+  upsertMascotaBasica, cerrarPedido, getMascotaById, updateMascotaFotoReferencia,
   getPedidosPorFecha,
   searchMascotasByNombre, getPedidosPorMascota,
   insertGasto, getGastosPorFecha, updateGasto, deleteGasto,
