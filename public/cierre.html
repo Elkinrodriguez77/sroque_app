@@ -21,6 +21,7 @@
         <a href="/gastos.html">Gastos</a>
         <a href="/servicios.html">Consulta Servicios</a>
         <a href="/dashboard.html">Dashboard</a>
+        <a href="/bi.html">BI</a>
         <a href="/cierre.html" class="active">Cierre</a>
       </nav>
     </div>
@@ -134,6 +135,24 @@
 
       <div id="cierreGranTotal" class="cierre-gran-total"></div>
     </div>
+
+    <section id="arqueoCaja" class="arqueo-caja" aria-labelledby="arqueoTitulo">
+      <h3 id="arqueoTitulo">Arqueo de caja (efectivo)</h3>
+      <p class="arqueo-intro">Cuenta billetes y monedas en caja. Tras consultar el periodo y el piso arriba, &laquo;Validar cierre&raquo; compara este total con el cierre en efectivo del sistema (mismas fechas y piso).</p>
+      <p id="cierreContextoArqueo" class="arqueo-contexto" hidden></p>
+      <h4 class="arqueo-subseccion">Billetes</h4>
+      <div class="arqueo-grid" id="arqueoGridBilletes"></div>
+      <h4 class="arqueo-subseccion">Monedas</h4>
+      <div class="arqueo-grid" id="arqueoGridMonedas"></div>
+      <div class="arqueo-total-line">
+        <span>Total arqueo (billetes + monedas)</span>
+        <strong id="arqueoTotal">$ 0</strong>
+      </div>
+      <div class="arqueo-actions">
+        <button type="button" id="btnValidarCierre" class="btn-primary">Validar cierre</button>
+      </div>
+      <div id="arqueoValidacion" class="arqueo-validacion" aria-live="polite" hidden></div>
+    </section>
 
     <div id="cierreMsg" class="pedidos-msg" aria-live="polite"></div>
   </main>

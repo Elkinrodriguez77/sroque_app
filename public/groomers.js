@@ -16,53 +16,86 @@ document.getElementById('btnLogout')?.addEventListener('click', async () => {
 const form = document.getElementById('groomerForm');
 const errorsEl = document.getElementById('groomerErrors');
 const listEl = document.getElementById('groomerList');
+const filtroEstadoEl = document.getElementById('filtroGroomerEstado');
 const btnCancel = document.getElementById('btnCancel');
 const btnSubmit = document.getElementById('btnSubmit');
 const formLegend = document.getElementById('formLegend');
 
-async function loadGroomers() {
-  listEl.innerHTML = '';
-  try {
-    const resp = await fetch('/api/groomers');
-    const { ok, data } = await resp.json();
-    if (!ok || !data) return;
-    for (const g of data) {
-      const card = document.createElement('div');
-      card.className = 'groomer-card' + (g.activo ? '' : ' groomer-inactive');
+let groomersCache = [];
 
-      const info = document.createElement('div');
-      info.className = 'groomer-info';
-      info.innerHTML = `
+function filtrarGroomers(data) {
+  const v = filtroEstadoEl?.value || 'todos';
+  if (v === 'activos') return data.filter((g) => g.activo);
+  if (v === 'inactivos') return data.filter((g) => !g.activo);
+  return data;
+}
+
+function renderGroomerList() {
+  listEl.innerHTML = '';
+  const data = filtrarGroomers(groomersCache);
+
+  if (groomersCache.length === 0) {
+    listEl.innerHTML = '<p style="color:#9ca3af">No hay groomers registrados.</p>';
+    return;
+  }
+
+  if (data.length === 0) {
+    const v = filtroEstadoEl?.value || 'todos';
+    let msg = 'No hay resultados para este filtro.';
+    if (v === 'activos') msg = 'No hay groomers activos.';
+    if (v === 'inactivos') msg = 'No hay groomers inactivos.';
+    listEl.innerHTML = `<p style="color:#9ca3af">${msg}</p>`;
+    return;
+  }
+
+  for (const g of data) {
+    const card = document.createElement('div');
+    card.className = 'groomer-card' + (g.activo ? '' : ' groomer-inactive');
+
+    const info = document.createElement('div');
+    info.className = 'groomer-info';
+    info.innerHTML = `
         <strong>${g.nombre} ${g.apellido}</strong>
         <span class="groomer-doc">Doc: ${g.documento}</span>
         <span class="badge ${g.activo ? 'badge-active' : 'badge-inactive'}">${g.activo ? 'Activo' : 'Inactivo'}</span>
       `;
 
-      const actions = document.createElement('div');
-      actions.className = 'groomer-actions';
+    const actions = document.createElement('div');
+    actions.className = 'groomer-actions';
 
-      const btnEdit = document.createElement('button');
-      btnEdit.type = 'button';
-      btnEdit.textContent = 'Editar';
-      btnEdit.onclick = () => editGroomer(g);
+    const btnEdit = document.createElement('button');
+    btnEdit.type = 'button';
+    btnEdit.textContent = 'Editar';
+    btnEdit.onclick = () => editGroomer(g);
 
-      const btnToggle = document.createElement('button');
-      btnToggle.type = 'button';
-      btnToggle.textContent = g.activo ? 'Desactivar' : 'Activar';
-      btnToggle.className = g.activo ? 'btn-danger' : 'btn-success';
-      btnToggle.onclick = () => toggleActivo(g.id, !g.activo);
+    const btnToggle = document.createElement('button');
+    btnToggle.type = 'button';
+    btnToggle.textContent = g.activo ? 'Desactivar' : 'Activar';
+    btnToggle.className = g.activo ? 'btn-danger' : 'btn-success';
+    btnToggle.onclick = () => toggleActivo(g.id, !g.activo);
 
-      actions.appendChild(btnEdit);
-      actions.appendChild(btnToggle);
+    actions.appendChild(btnEdit);
+    actions.appendChild(btnToggle);
 
-      card.appendChild(info);
-      card.appendChild(actions);
-      listEl.appendChild(card);
+    card.appendChild(info);
+    card.appendChild(actions);
+    listEl.appendChild(card);
+  }
+}
+
+async function loadGroomers() {
+  try {
+    const resp = await fetch('/api/groomers');
+    const { ok, data } = await resp.json();
+    if (!ok || !data) {
+      groomersCache = [];
+      renderGroomerList();
+      return;
     }
-    if (data.length === 0) {
-      listEl.innerHTML = '<p style="color:#9ca3af">No hay groomers registrados.</p>';
-    }
+    groomersCache = data;
+    renderGroomerList();
   } catch {
+    groomersCache = [];
     listEl.innerHTML = '<p class="errors">Error al cargar groomers.</p>';
   }
 }
@@ -126,5 +159,7 @@ async function toggleActivo(id, activo) {
     if (resp.ok) await loadGroomers();
   } catch { /* silent */ }
 }
+
+filtroEstadoEl?.addEventListener('change', () => renderGroomerList());
 
 document.addEventListener('DOMContentLoaded', loadGroomers);

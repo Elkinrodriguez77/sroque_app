@@ -21,6 +21,7 @@
         <a href="/gastos.html">Gastos</a>
         <a href="/servicios.html">Consulta Servicios</a>
         <a href="/dashboard.html">Dashboard</a>
+        <a href="/bi.html">BI</a>
         <a href="/cierre.html">Cierre</a>
       </nav>
     </div>
@@ -54,9 +55,20 @@
       </form>
     </fieldset>
 
-    <fieldset>
+    <fieldset class="groomers-list-fieldset">
       <legend>Groomers registrados</legend>
-      <div id="groomerList"></div>
+      <div class="groomers-toolbar">
+        <label class="groomers-filter-label">Mostrar
+          <select id="filtroGroomerEstado" class="groomers-filter-select">
+            <option value="todos" selected>Todos</option>
+            <option value="activos">Activos</option>
+            <option value="inactivos">Inactivos</option>
+          </select>
+        </label>
+      </div>
+      <div id="groomerListScroll" class="groomer-list-scroll">
+        <div id="groomerList" class="groomer-list-inner"></div>
+      </div>
     </fieldset>
   </main>
 

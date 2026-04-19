@@ -15,6 +15,29 @@ document.getElementById('btnLogout')?.addEventListener('click', async () => {
 
 const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 
+const METODO_EFECTIVO = 'Efectivo';
+
+/** Denominaciones de billetes COP para arqueo físico */
+const BILLETES_ARQUEO = [
+  { id: '2000', denom: 2000, label: '$ 2.000' },
+  { id: '5000', denom: 5000, label: '$ 5.000' },
+  { id: '10000', denom: 10000, label: '$ 10.000' },
+  { id: '20000', denom: 20000, label: '$ 20.000' },
+  { id: '50000', denom: 50000, label: '$ 50.000' },
+  { id: '100000', denom: 100000, label: '$ 100.000' },
+];
+
+/** Monedas COP (pesos) */
+const MONEDAS_ARQUEO = [
+  { id: 'm50', denom: 50, label: '$ 50' },
+  { id: 'm100', denom: 100, label: '$ 100' },
+  { id: 'm200', denom: 200, label: '$ 200' },
+  { id: 'm500', denom: 500, label: '$ 500' },
+  { id: 'm1000', denom: 1000, label: '$ 1.000' },
+];
+
+let cierreEfectivoActual = null;
+
 function todayISO() {
   return new Date().toLocaleDateString('en-CA');
 }
@@ -36,6 +59,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btnConsultar').addEventListener('click', consultarCierre);
   document.getElementById('boutiqueForm').addEventListener('submit', submitBoutique);
+
+  function poblarGrupoArqueo(containerId, items) {
+    const arqueoGrid = document.getElementById(containerId);
+    if (!arqueoGrid) return;
+    for (const b of items) {
+      const wrap = document.createElement('div');
+      wrap.className = 'arqueo-field';
+      wrap.innerHTML = `
+        <label for="arqueo_${b.id}">${b.label} <span style="color:#64748b">(cant.)</span></label>
+        <input type="number" id="arqueo_${b.id}" min="0" step="1" inputmode="numeric" value="0" autocomplete="off" data-denom="${b.denom}" />
+      `;
+      arqueoGrid.appendChild(wrap);
+    }
+    arqueoGrid.querySelectorAll('input').forEach((inp) => {
+      inp.addEventListener('input', actualizarTotalArqueo);
+    });
+  }
+  poblarGrupoArqueo('arqueoGridBilletes', BILLETES_ARQUEO);
+  poblarGrupoArqueo('arqueoGridMonedas', MONEDAS_ARQUEO);
+  actualizarTotalArqueo();
+  document.getElementById('btnValidarCierre')?.addEventListener('click', validarArqueoConCierre);
 });
 
 async function submitBoutique(e) {
@@ -84,6 +128,12 @@ async function consultarCierre() {
   const piso = document.getElementById('filtroPiso').value;
   const msg = document.getElementById('cierreMsg');
   msg.textContent = '';
+  cierreEfectivoActual = null;
+  const ctxArqueo = document.getElementById('cierreContextoArqueo');
+  if (ctxArqueo) {
+    ctxArqueo.textContent = '';
+    ctxArqueo.hidden = true;
+  }
   document.getElementById('cierreReport').hidden = true;
 
   if (!desde || !hasta) { msg.textContent = 'Selecciona ambas fechas.'; return; }
@@ -111,7 +161,11 @@ async function consultarCierre() {
 
     const inicioMap = dataInicio.data || {};
     renderBoutiqueList(dataBoutique.data || []);
-    buildCierreReport(dataSpa.data || [], dataBoutique.data || [], dataGastos.data || [], inicioMap);
+    buildCierreReport(dataSpa.data || [], dataBoutique.data || [], dataGastos.data || [], inicioMap, {
+      desde,
+      hasta,
+      piso,
+    });
   } catch {
     msg.textContent = 'Error de red al consultar.';
   }
@@ -150,7 +204,7 @@ function renderBoutiqueList(rows) {
   list.hidden = false;
 }
 
-function buildCierreReport(spaRows, boutiqueRows, gastosRows, inicioMap) {
+function buildCierreReport(spaRows, boutiqueRows, gastosRows, inicioMap, contexto) {
   const report = document.getElementById('cierreReport');
   const tbody = document.getElementById('cierreBody');
   const tfoot = document.getElementById('cierreFoot');
@@ -163,10 +217,13 @@ function buildCierreReport(spaRows, boutiqueRows, gastosRows, inicioMap) {
     if (!agg[m]) agg[m] = { inicio: 0, spa: 0, boutique: 0, gastos: 0 };
   }
 
-  // Seed with inicio de caja data
-  for (const [m, vals] of Object.entries(inicioMap)) {
-    ensure(m);
-    agg[m].inicio = (Number(vals.spa) || 0) + (Number(vals.boutique) || 0) - (Number(vals.gastos) || 0);
+  // Inicio de caja: solo Efectivo arrastra saldo día a día (histórico antes del periodo).
+  // El resto de medios se consideran con inicio 0 cada vez (no se acumula inicio digital).
+  ensure(METODO_EFECTIVO);
+  const iniEfe = inicioMap[METODO_EFECTIVO];
+  if (iniEfe) {
+    agg[METODO_EFECTIVO].inicio =
+      (Number(iniEfe.spa) || 0) + (Number(iniEfe.boutique) || 0) - (Number(iniEfe.gastos) || 0);
   }
 
   // Period: SPA ingresos
@@ -199,21 +256,31 @@ function buildCierreReport(spaRows, boutiqueRows, gastosRows, inicioMap) {
   }
 
   const methods = Object.keys(agg).sort();
-  let totInicio = 0, totSpa = 0, totBoutique = 0, totGastos = 0, totCierre = 0;
+  let totSpa = 0, totBoutique = 0, totGastos = 0, totCierre = 0;
+
+  const efe = agg[METODO_EFECTIVO] || { inicio: 0, spa: 0, boutique: 0, gastos: 0 };
+  const totInicioEfectivo = efe.inicio;
 
   for (const m of methods) {
     const d = agg[m];
-    const cierre = d.inicio + d.spa + d.boutique - d.gastos;
-    totInicio += d.inicio;
+    const cierre =
+      m === METODO_EFECTIVO
+        ? d.inicio + d.spa + d.boutique - d.gastos
+        : d.spa + d.boutique - d.gastos;
     totSpa += d.spa;
     totBoutique += d.boutique;
     totGastos += d.gastos;
     totCierre += cierre;
 
+    const inicioCell =
+      m === METODO_EFECTIVO
+        ? `<td class="${d.inicio >= 0 ? '' : 'txt-red'}">${fmt.format(d.inicio)}</td>`
+        : `<td class="cierre-inicio-zero">${fmt.format(0)}</td>`;
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${m}</td>
-      <td class="${d.inicio >= 0 ? '' : 'txt-red'}">${fmt.format(d.inicio)}</td>
+      ${inicioCell}
       <td>${fmt.format(d.spa)}</td>
       <td>${fmt.format(d.boutique)}</td>
       <td>${fmt.format(d.gastos)}</td>
@@ -222,10 +289,13 @@ function buildCierreReport(spaRows, boutiqueRows, gastosRows, inicioMap) {
     tbody.appendChild(tr);
   }
 
+  const cierreEfectivo = efe.inicio + efe.spa + efe.boutique - efe.gastos;
+  cierreEfectivoActual = cierreEfectivo;
+
   const trFoot = document.createElement('tr');
   trFoot.innerHTML = `
     <td><strong>TOTAL</strong></td>
-    <td><strong>${fmt.format(totInicio)}</strong></td>
+    <td><strong>${fmt.format(totInicioEfectivo)}</strong></td>
     <td><strong>${fmt.format(totSpa)}</strong></td>
     <td><strong>${fmt.format(totBoutique)}</strong></td>
     <td><strong>${fmt.format(totGastos)}</strong></td>
@@ -234,16 +304,85 @@ function buildCierreReport(spaRows, boutiqueRows, gastosRows, inicioMap) {
   tfoot.appendChild(trFoot);
 
   const granTotal = document.getElementById('cierreGranTotal');
+  const cierreEfeClass = cierreEfectivo >= 0 ? 'cierre-positive' : 'cierre-negative';
   granTotal.innerHTML = `
-    <div class="cierre-label">CIERRE DE CAJA</div>
-    <div class="cierre-value ${totCierre >= 0 ? 'cierre-positive' : 'cierre-negative'}">${fmt.format(totCierre)}</div>
+    <div class="cierre-label">CIERRE DE CAJA (efectivo)</div>
+    <div class="cierre-value ${cierreEfeClass}">${fmt.format(cierreEfectivo)}</div>
     <div class="cierre-detail">
-      Inicio ${fmt.format(totInicio)}
-      + Ingresos SPA ${fmt.format(totSpa)}
-      + Boutique ${fmt.format(totBoutique)}
-      &minus; Gastos ${fmt.format(totGastos)}
+      Inicio ${fmt.format(efe.inicio)}
+      + Ingresos SPA ${fmt.format(efe.spa)}
+      + Boutique ${fmt.format(efe.boutique)}
+      &minus; Gastos ${fmt.format(efe.gastos)}
     </div>
+    <div class="cierre-gran-total-note">Solo método de pago &laquo;Efectivo&raquo;, mismo periodo y piso que elegiste arriba.</div>
   `;
 
+  if (contexto) {
+    const elCtx = document.getElementById('cierreContextoArqueo');
+    if (elCtx) {
+      const pisoLabel = contexto.piso && String(contexto.piso).trim()
+        ? contexto.piso
+        : 'General (todos los pisos)';
+      elCtx.textContent = `Cierre y arqueo para: ${formatDateSafe(contexto.desde)} – ${formatDateSafe(contexto.hasta)} · ${pisoLabel}. Los datos ya vienen filtrados por piso (pedidos, boutique, gastos e inicio de caja).`;
+      elCtx.hidden = false;
+    }
+  }
+
+  actualizarTotalArqueo();
+  limpiarMensajeValidacionArqueo();
+
   report.hidden = false;
+}
+
+function leerTotalArqueo() {
+  let sum = 0;
+  const grupos = [...BILLETES_ARQUEO, ...MONEDAS_ARQUEO];
+  for (const b of grupos) {
+    const el = document.getElementById(`arqueo_${b.id}`);
+    if (!el) continue;
+    const n = Math.max(0, Math.floor(Number(el.value) || 0));
+    sum += n * b.denom;
+  }
+  return sum;
+}
+
+function actualizarTotalArqueo() {
+  const total = leerTotalArqueo();
+  const el = document.getElementById('arqueoTotal');
+  if (el) el.textContent = fmt.format(total);
+}
+
+function limpiarMensajeValidacionArqueo() {
+  const box = document.getElementById('arqueoValidacion');
+  if (!box) return;
+  box.textContent = '';
+  box.className = 'arqueo-validacion';
+  box.hidden = true;
+}
+
+function validarArqueoConCierre() {
+  const box = document.getElementById('arqueoValidacion');
+  if (!box) return;
+
+  if (cierreEfectivoActual === null || Number.isNaN(cierreEfectivoActual)) {
+    box.hidden = false;
+    box.className = 'arqueo-validacion err';
+    box.textContent = 'Consulta el reporte del periodo primero para calcular el cierre en efectivo.';
+    return;
+  }
+
+  const arqueo = leerTotalArqueo();
+  const diff = arqueo - cierreEfectivoActual;
+  const tol = 0;
+
+  box.hidden = false;
+  if (Math.abs(diff) <= tol) {
+    box.className = 'arqueo-validacion ok';
+    box.textContent = `El arqueo (${fmt.format(arqueo)}) coincide con el cierre en efectivo del sistema (${fmt.format(cierreEfectivoActual)}) para el mismo periodo y piso consultados.`;
+    return;
+  }
+
+  box.className = 'arqueo-validacion err';
+  const sign = diff > 0 ? 'Sobran' : 'Faltan';
+  box.textContent = `${sign} ${fmt.format(Math.abs(diff))}: arqueo físico ${fmt.format(arqueo)} vs cierre sistema ${fmt.format(cierreEfectivoActual)}.`;
 }

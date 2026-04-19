@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BI — Ventas - San Roque</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="bi-body">
+  <header class="app-header">
+    <div class="app-header-left">
+      <img src="/img/logo_san_roque.png" alt="San Roque" />
+      <span class="app-title">San Roque</span>
+      <nav>
+        <a href="/">Clientes</a>
+        <a href="/pedido.html">Pedidos</a>
+        <a href="/groomers.html">Equipo</a>
+        <a href="/gastos.html">Gastos</a>
+        <a href="/servicios.html">Consulta Servicios</a>
+        <a href="/dashboard.html">Dashboard</a>
+        <a href="/bi.html" class="active">BI</a>
+        <a href="/cierre.html">Cierre</a>
+      </nav>
+    </div>
+    <div class="app-header-right">
+      <span class="user-badge" id="userBadge"></span>
+      <button class="btn-logout" id="btnLogout">Salir</button>
+    </div>
+  </header>
+
+  <main class="dash-container bi-main">
+    <h1>BI — Ventas</h1>
+    <p class="bi-lead">Panel de Power&nbsp;BI embebido. Usa el scroll dentro del informe si el contenido es más alto que el área visible.</p>
+    <div class="bi-embed-shell" id="biEmbedShell">
+      <div class="bi-fs-bar">
+        <button type="button" class="btn-secondary bi-fs-btn" id="btnBiFullscreen" aria-pressed="false">
+          Pantalla completa
+        </button>
+      </div>
+      <iframe
+        class="bi-embed"
+        title="SanRoque_BI"
+        src="https://app.powerbi.com/view?r=eyJrIjoiMzYzYjE1NmYtZWJmZC00MmIwLTg3NTctYjdkYjBlNzkxZmRlIiwidCI6IjM2M2I4NjhjLWJjNGEtNGFlMS05NDA1LWNiNWRjMzlmMDk2NyIsImMiOjR9"
+        allowfullscreen
+      ></iframe>
+    </div>
+  </main>
+
+  <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
+  <script src="/bi.js" defer></script>
+</body>
+</html>
