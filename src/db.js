@@ -634,7 +634,22 @@ async function deleteGasto(id) {
 // ----- Inicio de Caja (por método de pago) -----
 const INICIO_CAJA_DESDE = '2026-03-02';
 
-async function getInicioCajaPorMetodo(antesDeFecha, piso) {
+/** Primer día con inicio de efectivo “rebasado” (saldo fijo + arrastre desde aquí). Opcional por env. */
+const INICIO_EFECTIVO_SEED_FECHA = process.env.INICIO_EFECTIVO_SEED_FECHA || '2026-04-20';
+
+function montoInicioEfectivoSeed(piso) {
+  if (piso === 'Piso 1') return 12500;
+  if (piso === 'Piso 2') return 20000;
+  return 32500;
+}
+
+function netoEfectivoEnResultado(result) {
+  const e = result['Efectivo'];
+  if (!e) return 0;
+  return (Number(e.spa) || 0) + (Number(e.boutique) || 0) - (Number(e.gastos) || 0);
+}
+
+async function getInicioCajaPorMetodo(antesDeFecha, piso, aplicarSemillaEfectivo = true) {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
 
   const pN = [INICIO_CAJA_DESDE, antesDeFecha];
@@ -711,6 +726,17 @@ async function getInicioCajaPorMetodo(antesDeFecha, piso) {
     ensure(m);
     result[m].gastos += Number(row.total);
   }
+
+  if (!aplicarSemillaEfectivo) return result;
+
+  const semilla = INICIO_EFECTIVO_SEED_FECHA;
+  if (String(antesDeFecha) < semilla) return result;
+
+  const basePreSemilla = await getInicioCajaPorMetodo(semilla, piso, false);
+  const netoPre = netoEfectivoEnResultado(basePreSemilla);
+  const netoFull = netoEfectivoEnResultado(result);
+  const netoEfectivo = montoInicioEfectivoSeed(piso) + (netoFull - netoPre);
+  result['Efectivo'] = { spa: netoEfectivo, boutique: 0, gastos: 0 };
 
   return result;
 }
