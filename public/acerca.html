@@ -6,7 +6,7 @@
   <title>Acerca de — San Roque</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body class="has-sidebar">
@@ -40,85 +40,169 @@
 <div class="app-shell">
 <a href="/" class="app-floating-logo" aria-label="San Roque, inicio"><img src="/img/logo_san_roque.png" alt="San Roque" decoding="async" /></a>
   <main class="dash-container acerca-page">
-    <header class="acerca-hero">
-      <p class="acerca-kicker">Portal de operación</p>
-      <h1>Acerca de esta aplicación</h1>
-      <p class="acerca-sub">Documentación funcional del sistema interno San Roque: qué hace cada módulo y qué incorpora la versión actual.</p>
-      <div class="acerca-version-pill" role="status">
-        <span class="acerca-version-num">Versión 2</span>
-        <span class="acerca-version-date">Actual · 2026</span>
-      </div>
-    </header>
-
-    <section class="acerca-section acerca-highlight" aria-labelledby="titulo-novedades">
-      <h2 id="titulo-novedades">Novedades destacadas (versión 2)</h2>
-      <p class="acerca-lead">Cambios principales respecto a la línea base anterior orientados a operación diaria, análisis y experiencia de uso.</p>
-      <ul class="acerca-list-highlight">
-        <li><strong>Menú lateral con iconos:</strong> navegación fija a la izquierda; los textos aparecen al pasar el cursor o al usar la barra superior (móvil) o el botón de menú (escritorio: clic para fijar el panel expandido).</li>
-        <li><strong>BI — Ventas:</strong> integración del tablero de Power BI con vista adaptable y botón de <strong>pantalla completa</strong> dentro de la página.</li>
-        <li><strong>Cierre de caja:</strong> lógica de <strong>inicio solo en efectivo</strong> (arrastre día a día) y resto de medios con inicio en cero; arqueo físico de <strong>billetes y monedas</strong> en pesos colombianos y botón <strong>Validar cierre</strong> frente al sistema; filtros por fechas y piso.</li>
-        <li><strong>Equipo (groomers):</strong> filtro por activos, inactivos o todos, con lista en panel desplazable para listas largas.</li>
-        <li><strong>Acerca de:</strong> esta guía centralizada con versión y descripción de módulos.</li>
-      </ul>
-    </section>
-
-    <section class="acerca-section" aria-labelledby="titulo-modulos">
-      <h2 id="titulo-modulos">Guía por sección</h2>
-      <p class="acerca-muted">Cada ítem corresponde a una entrada del menú principal. La aplicación trabaja con datos almacenados de forma persistente para informes y tableros.</p>
-
-      <div class="acerca-grid">
-        <article class="acerca-card">
-          <h3>Clientes</h3>
-          <p>Registro y actualización de propietarios, datos de contacto, acudientes cuando aplica, consentimientos y <strong>mascotas</strong> asociadas al cliente. Incluye búsqueda por teléfono para iniciar un pedido o corregir datos.</p>
-        </article>
-        <article class="acerca-card">
-          <h3>Pedidos</h3>
-          <p>Gestión de <strong>servicios SPA</strong> del día: servicio, precio, groomers, método de pago (incluido mixto), piso y cierre del pedido. Los pedidos cerrados alimentan dashboard, cierre de caja e informes.</p>
-        </article>
-        <article class="acerca-card">
-          <h3>Equipo</h3>
-          <p>Alta, edición y activación o desactivación de <strong>groomers</strong> (documento y nombre). El filtro permite ver activos, inactivos o todos; la lista usa desplazamiento vertical cuando hay muchos registros.</p>
-        </article>
-        <article class="acerca-card">
-          <h3>Gastos</h3>
-          <p>Registro de egresos con fecha, categoría, medio de pago y piso, para conciliar contra el reporte financiero y el cierre.</p>
-        </article>
-        <article class="acerca-card">
-          <h3>Consulta servicios</h3>
-          <p>Consulta de <strong>historial de servicios por mascota</strong> (SPA) para respaldo operativo y atención al cliente.</p>
-        </article>
-        <article class="acerca-card">
-          <h3>Dashboard</h3>
-          <p>Resumen por periodo de <strong>ingresos</strong> (pedidos y pagos) y <strong>gastos</strong>, con pestañas y tablas según filtros; pensado para seguimiento rápido del negocio.</p>
-        </article>
-        <article class="acerca-card">
-          <h3>BI</h3>
-          <p>Visualización embebida del informe de <strong>Power BI (ventas)</strong> publicado en la nube; incluye control para expandir el informe a pantalla completa del navegador.</p>
-        </article>
-        <article class="acerca-card">
-          <h3>Cierre</h3>
-          <p>Registro de ventas boutique del periodo, <strong>reporte de cierre por método de pago</strong> (SPA, boutique, gastos), resumen de <strong>efectivo</strong> y <strong>arqueo de caja</strong> con validación contra el cierre en efectivo del sistema, respetando el piso seleccionado.</p>
-        </article>
-        <article class="acerca-card acerca-card-note">
-          <h3>Acerca de</h3>
-          <p>Esta pantalla: versión del software, novedades y descripción de módulos para administración y equipo.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="acerca-section" aria-labelledby="titulo-versiones">
-      <h2 id="titulo-versiones">Historial de versiones (resumen)</h2>
-      <dl class="acerca-dl">
-        <div>
-          <dt>Versión 2 · actual</dt>
-          <dd>Menú lateral, BI con pantalla completa, cierre de caja y arqueo mejorados, filtros de equipo, documentación «Acerca de».</dd>
+    <div class="acerca-shell">
+      <header class="acerca-hero-pro">
+        <div class="acerca-hero-bg" aria-hidden="true"></div>
+        <div class="acerca-hero-grid">
+          <div class="acerca-hero-text">
+            <p class="acerca-badge-pill"><span class="acerca-badge-dot"></span> Centro de documentación</p>
+            <h1 class="acerca-title-xl">San Roque <span class="acerca-title-gradient">Studio</span></h1>
+            <p class="acerca-hero-desc">Todo lo que necesitas saber del <strong>portal de operaciones</strong>: para qué sirve cada pantalla, qué cambió en la versión actual y cómo se conecta con ventas, caja y analítica.</p>
+            <div class="acerca-hero-chips">
+              <span class="acerca-chip acerca-chip-strong"><abbr title="Versión actual">v2.0</abbr></span>
+              <span class="acerca-chip">Actualizado 2026</span>
+              <span class="acerca-chip acerca-chip-soft">Uso interno</span>
+            </div>
+          </div>
+          <div class="acerca-hero-visual" aria-hidden="true">
+            <div class="acerca-orbit">
+              <span class="acerca-orb acerca-orb-a"></span>
+              <span class="acerca-orb acerca-orb-b"></span>
+              <span class="acerca-orb acerca-orb-c"></span>
+              <div class="acerca-hero-icon-wrap">
+                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="url(#acercaGrad)" stroke-width="1.25" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="acercaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#a78bfa" />
+                      <stop offset="100%" stop-color="#38bdf8" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" />
+                  <path d="M12 22V12M12 12L3 7M12 12l9-5" />
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <dt>Versión 1</dt>
-          <dd>Línea base con navegación superior: clientes, pedidos, equipo, gastos, consulta de servicios, dashboard, cierre y BI en formato inicial.</dd>
+      </header>
+
+      <section class="acerca-metrics" aria-label="Resumen">
+        <div class="acerca-metric">
+          <span class="acerca-metric-val">9</span>
+          <span class="acerca-metric-label">Módulos en el menú</span>
         </div>
-      </dl>
-    </section>
+        <div class="acerca-metric">
+          <span class="acerca-metric-val">∞</span>
+          <span class="acerca-metric-label">Pedidos &amp; historial</span>
+        </div>
+        <div class="acerca-metric">
+          <span class="acerca-metric-val">360°</span>
+          <span class="acerca-metric-label">SPA · Boutique · Caja · BI</span>
+        </div>
+      </section>
+
+      <section class="acerca-section-pro" aria-labelledby="acerca-nuevo">
+        <div class="acerca-section-head">
+          <h2 id="acerca-nuevo" class="acerca-h2-pro"><span class="acerca-h2-accent"></span> Novedades en la versión 2.0</h2>
+          <p class="acerca-section-lead">Mejoras pensadas para recepción, administración y dirección: menos fricción en el día a día y más claridad en números.</p>
+        </div>
+        <div class="acerca-feature-deck">
+          <article class="acerca-feature-card">
+            <div class="acerca-fc-icon" aria-hidden="true">◈</div>
+            <h3>Navegación lateral</h3>
+            <p>Menú fijo con iconos; al pasar el ratón se despliegan las etiquetas. En móvil, botón <strong>Menú</strong> para abrir el panel.</p>
+          </article>
+          <article class="acerca-feature-card">
+            <div class="acerca-fc-icon" aria-hidden="true">◎</div>
+            <h3>BI — Ventas</h3>
+            <p>Informe Power&nbsp;BI embebido, adaptable al alto de pantalla y con vista a <strong>pantalla completa</strong> cuando lo necesites.</p>
+          </article>
+          <article class="acerca-feature-card">
+            <div class="acerca-fc-icon" aria-hidden="true">₿</div>
+            <h3>Cierre inteligente</h3>
+            <p><strong>Inicio de caja</strong> arrastrado solo en <strong>efectivo</strong>; otros medios desde cero por periodo. <strong>Arqueo</strong> de billetes y monedas COP y botón <strong>Validar cierre</strong>. Todo filtrable por <strong>piso</strong> y fechas.</p>
+          </article>
+          <article class="acerca-feature-card">
+            <div class="acerca-fc-icon" aria-hidden="true">✂</div>
+            <h3>Equipo groomer</h3>
+            <p>Filtro <strong>activos / inactivos / todos</strong> y lista con scroll para plantillas que siguen creciendo.</p>
+          </article>
+          <article class="acerca-feature-card acerca-feature-wide">
+            <div class="acerca-fc-icon" aria-hidden="true">📖</div>
+            <h3>Esta guía «Acerca de»</h3>
+            <p>Referencia única para incorporar personal y alinear criterios: qué hace cada sección y cómo encaja en el flujo real del negocio.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="acerca-section-pro" aria-labelledby="acerca-map">
+        <div class="acerca-section-head">
+          <h2 id="acerca-map" class="acerca-h2-pro"><span class="acerca-h2-accent acerca-h2-accent-green"></span> Mapa del sistema</h2>
+          <p class="acerca-section-lead">Cada entrada del menú corresponde a un flujo distinto; los datos quedan en base para reportes, dashboard y Power&nbsp;BI.</p>
+        </div>
+        <div class="acerca-module-mosaic">
+          <article class="acerca-mod">
+            <span class="acerca-mod-num">01</span>
+            <h3>Clientes</h3>
+            <p>Alta y búsqueda de dueños, datos de contacto, acudientes cuando aplica, consentimientos y <strong>mascotas</strong>. Punto de partida para pedidos.</p>
+          </article>
+          <article class="acerca-mod">
+            <span class="acerca-mod-num">02</span>
+            <h3>Pedidos</h3>
+            <p>Servicios <strong>SPA</strong> del día: precio, groomers, piso, pago simple o <strong>mixto</strong>. Al cerrar, alimenta métricas y cierre.</p>
+          </article>
+          <article class="acerca-mod">
+            <span class="acerca-mod-num">03</span>
+            <h3>Equipo</h3>
+            <p>Registro de <strong>groomers</strong>, activar o desactivar perfiles, filtros y lista desplazable.</p>
+          </article>
+          <article class="acerca-mod">
+            <span class="acerca-mod-num">04</span>
+            <h3>Gastos</h3>
+            <p>Egresos con categoría, medio de pago y piso; base para cuadre con ingresos.</p>
+          </article>
+          <article class="acerca-mod">
+            <span class="acerca-mod-num">05</span>
+            <h3>Consulta servicios</h3>
+            <p>Historial de servicios por <strong>mascota</strong> para soporte y trazabilidad.</p>
+          </article>
+          <article class="acerca-mod">
+            <span class="acerca-mod-num">06</span>
+            <h3>Dashboard</h3>
+            <p>Resumen por fechas de <strong>ingresos</strong> (pedidos, modos de pago) y <strong>gastos</strong> con pestañas dedicadas.</p>
+          </article>
+          <article class="acerca-mod">
+            <span class="acerca-mod-num">07</span>
+            <h3>BI</h3>
+            <p>Tablero <strong>Power BI</strong> de ventas: lectura profesional y modo pantalla completa.</p>
+          </article>
+          <article class="acerca-mod">
+            <span class="acerca-mod-num">08</span>
+            <h3>Cierre</h3>
+            <p>Ventas boutique del periodo, cruce por método de pago, <strong>cierre en efectivo</strong>, arqueo y validación frente al sistema.</p>
+          </article>
+          <article class="acerca-mod acerca-mod-you">
+            <span class="acerca-mod-num">09</span>
+            <h3>Acerca de</h3>
+            <p>Esta misma pantalla: visión global, versión y evolución del producto.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="acerca-section-pro acerca-timeline-block" aria-labelledby="acerca-evo">
+        <h2 id="acerca-evo" class="acerca-h2-pro"><span class="acerca-h2-accent acerca-h2-accent-amber"></span> Evolución del producto</h2>
+        <ol class="acerca-timeline">
+          <li class="acerca-tl-item acerca-tl-current">
+            <div class="acerca-tl-marker"></div>
+            <div class="acerca-tl-body">
+              <h3>Versión 2.0 <span class="acerca-tl-tag">Actual</span></h3>
+              <p>Menú lateral, BI a pantalla completa, cierre de caja y arqueo, filtros de equipo, anchos de formulario optimizados y documentación centralizada.</p>
+            </div>
+          </li>
+          <li class="acerca-tl-item">
+            <div class="acerca-tl-marker"></div>
+            <div class="acerca-tl-body">
+              <h3>Versión 1.x</h3>
+              <p>Línea base: navegación superior, clientes, pedidos, equipo, gastos, consulta de servicios, dashboard, cierre inicial y acceso a BI.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <aside class="acerca-cta">
+        <p><strong>¿Primera vez aquí?</strong> Recorre el menú lateral en orden (Clientes → Pedidos → Cierre) para ver cómo se conectan las piezas. Para soporte del producto, contacta a <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a>.</p>
+      </aside>
+    </div>
   </main>
 
   <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>

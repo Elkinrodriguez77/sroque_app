@@ -37,7 +37,7 @@ body {
 /* ---- Login card ---- */
 .login-wrapper {
   display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; padding: 24px;
+  min-height: 100vh; padding: 24px 24px 88px;
   position: relative; z-index: 1;
   background: radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.12), transparent 60%);
 }
@@ -93,6 +93,37 @@ body {
 .login-card button[type="submit"]:hover { background: #4f46e5; }
 
 .login-errors { color: #f87171; font-size: 0.85rem; min-height: 1.2em; margin-top: 6px; }
+
+.login-page-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 14px 16px 18px;
+  text-align: center;
+  background: linear-gradient(0deg, rgba(17, 24, 39, 0.92) 40%, rgba(17, 24, 39, 0));
+  pointer-events: none;
+}
+.login-page-footer p {
+  pointer-events: auto;
+}
+.login-app-version {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #a5b4fc;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.login-app-version strong {
+  font-weight: 800;
+  color: #c7d2fe;
+}
+.login-copyright {
+  font-size: 0.72rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
 
 /* ---- Reduce motion for accessibility ---- */
 @media (prefers-reduced-motion: reduce) {
