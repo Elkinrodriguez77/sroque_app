@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Acerca de — San Roque</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="has-sidebar">
+<button type="button" class="sidebar-backdrop" id="sidebarBackdrop" hidden aria-hidden="true" tabindex="-1"></button>
+<header class="app-mobile-bar" aria-label="Barra móvil">
+  <button type="button" class="app-mobile-menu-btn js-sidebar-toggle" aria-label="Abrir menú lateral" aria-expanded="false">Menú</button>
+  <span class="app-mobile-title">San Roque</span>
+</header>
+<aside class="app-sidebar" id="appSidebar" aria-label="Navegación principal">
+  <div class="sidebar-inner">
+    <nav class="sidebar-nav">
+      <ul class="sidebar-list">
+        <li><a href="/" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="sidebar-label">Clientes</span></a></li>
+        <li><a href="/pedido.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg><span class="sidebar-label">Pedidos</span></a></li>
+        <li><a href="/groomers.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="sidebar-label">Equipo</span></a></li>
+        <li><a href="/gastos.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg><span class="sidebar-label">Gastos</span></a></li>
+        <li><a href="/servicios.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span class="sidebar-label">Consulta servicios</span></a></li>
+        <li><a href="/dashboard.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg><span class="sidebar-label">Dashboard</span></a></li>
+        <li><a href="/bi.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg><span class="sidebar-label">BI</span></a></li>
+        <li><a href="/cierre.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M12 8v8M9 12h6"/></svg><span class="sidebar-label">Cierre</span></a></li>
+        <li><a href="/acerca.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="sidebar-label">Acerca de</span></a></li>
+      </ul>
+    </nav>
+    <div class="sidebar-foot">
+      <span class="user-badge" id="userBadge"></span>
+      <button type="button" class="btn-logout" id="btnLogout">Salir</button>
+    </div>
+  </div>
+</aside>
+
+<div class="app-shell">
+<a href="/" class="app-floating-logo" aria-label="San Roque, inicio"><img src="/img/logo_san_roque.png" alt="San Roque" decoding="async" /></a>
+  <main class="dash-container acerca-page">
+    <header class="acerca-hero">
+      <p class="acerca-kicker">Portal de operación</p>
+      <h1>Acerca de esta aplicación</h1>
+      <p class="acerca-sub">Documentación funcional del sistema interno San Roque: qué hace cada módulo y qué incorpora la versión actual.</p>
+      <div class="acerca-version-pill" role="status">
+        <span class="acerca-version-num">Versión 2</span>
+        <span class="acerca-version-date">Actual · 2026</span>
+      </div>
+    </header>
+
+    <section class="acerca-section acerca-highlight" aria-labelledby="titulo-novedades">
+      <h2 id="titulo-novedades">Novedades destacadas (versión 2)</h2>
+      <p class="acerca-lead">Cambios principales respecto a la línea base anterior orientados a operación diaria, análisis y experiencia de uso.</p>
+      <ul class="acerca-list-highlight">
+        <li><strong>Menú lateral con iconos:</strong> navegación fija a la izquierda; los textos aparecen al pasar el cursor o al usar la barra superior (móvil) o el botón de menú (escritorio: clic para fijar el panel expandido).</li>
+        <li><strong>BI — Ventas:</strong> integración del tablero de Power BI con vista adaptable y botón de <strong>pantalla completa</strong> dentro de la página.</li>
+        <li><strong>Cierre de caja:</strong> lógica de <strong>inicio solo en efectivo</strong> (arrastre día a día) y resto de medios con inicio en cero; arqueo físico de <strong>billetes y monedas</strong> en pesos colombianos y botón <strong>Validar cierre</strong> frente al sistema; filtros por fechas y piso.</li>
+        <li><strong>Equipo (groomers):</strong> filtro por activos, inactivos o todos, con lista en panel desplazable para listas largas.</li>
+        <li><strong>Acerca de:</strong> esta guía centralizada con versión y descripción de módulos.</li>
+      </ul>
+    </section>
+
+    <section class="acerca-section" aria-labelledby="titulo-modulos">
+      <h2 id="titulo-modulos">Guía por sección</h2>
+      <p class="acerca-muted">Cada ítem corresponde a una entrada del menú principal. La aplicación trabaja con datos almacenados de forma persistente para informes y tableros.</p>
+
+      <div class="acerca-grid">
+        <article class="acerca-card">
+          <h3>Clientes</h3>
+          <p>Registro y actualización de propietarios, datos de contacto, acudientes cuando aplica, consentimientos y <strong>mascotas</strong> asociadas al cliente. Incluye búsqueda por teléfono para iniciar un pedido o corregir datos.</p>
+        </article>
+        <article class="acerca-card">
+          <h3>Pedidos</h3>
+          <p>Gestión de <strong>servicios SPA</strong> del día: servicio, precio, groomers, método de pago (incluido mixto), piso y cierre del pedido. Los pedidos cerrados alimentan dashboard, cierre de caja e informes.</p>
+        </article>
+        <article class="acerca-card">
+          <h3>Equipo</h3>
+          <p>Alta, edición y activación o desactivación de <strong>groomers</strong> (documento y nombre). El filtro permite ver activos, inactivos o todos; la lista usa desplazamiento vertical cuando hay muchos registros.</p>
+        </article>
+        <article class="acerca-card">
+          <h3>Gastos</h3>
+          <p>Registro de egresos con fecha, categoría, medio de pago y piso, para conciliar contra el reporte financiero y el cierre.</p>
+        </article>
+        <article class="acerca-card">
+          <h3>Consulta servicios</h3>
+          <p>Consulta de <strong>historial de servicios por mascota</strong> (SPA) para respaldo operativo y atención al cliente.</p>
+        </article>
+        <article class="acerca-card">
+          <h3>Dashboard</h3>
+          <p>Resumen por periodo de <strong>ingresos</strong> (pedidos y pagos) y <strong>gastos</strong>, con pestañas y tablas según filtros; pensado para seguimiento rápido del negocio.</p>
+        </article>
+        <article class="acerca-card">
+          <h3>BI</h3>
+          <p>Visualización embebida del informe de <strong>Power BI (ventas)</strong> publicado en la nube; incluye control para expandir el informe a pantalla completa del navegador.</p>
+        </article>
+        <article class="acerca-card">
+          <h3>Cierre</h3>
+          <p>Registro de ventas boutique del periodo, <strong>reporte de cierre por método de pago</strong> (SPA, boutique, gastos), resumen de <strong>efectivo</strong> y <strong>arqueo de caja</strong> con validación contra el cierre en efectivo del sistema, respetando el piso seleccionado.</p>
+        </article>
+        <article class="acerca-card acerca-card-note">
+          <h3>Acerca de</h3>
+          <p>Esta pantalla: versión del software, novedades y descripción de módulos para administración y equipo.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="acerca-section" aria-labelledby="titulo-versiones">
+      <h2 id="titulo-versiones">Historial de versiones (resumen)</h2>
+      <dl class="acerca-dl">
+        <div>
+          <dt>Versión 2 · actual</dt>
+          <dd>Menú lateral, BI con pantalla completa, cierre de caja y arqueo mejorados, filtros de equipo, documentación «Acerca de».</dd>
+        </div>
+        <div>
+          <dt>Versión 1</dt>
+          <dd>Línea base con navegación superior: clientes, pedidos, equipo, gastos, consulta de servicios, dashboard, cierre y BI en formato inicial.</dd>
+        </div>
+      </dl>
+    </section>
+  </main>
+
+  <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
+</div>
+  <script src="/sidebar.js" defer></script>
+  <script src="/acerca.js" defer></script>
+</body>
+</html>

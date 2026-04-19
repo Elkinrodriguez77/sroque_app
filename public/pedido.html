@@ -9,28 +9,81 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
-<body>
-  <header class="app-header">
-    <div class="app-header-left">
-      <img src="/img/logo_san_roque.png" alt="San Roque" />
-      <span class="app-title">San Roque</span>
-      <nav>
-        <a href="/">Clientes</a>
-        <a href="/pedido.html" class="active">Pedidos</a>
-        <a href="/groomers.html">Equipo</a>
-        <a href="/gastos.html">Gastos</a>
-        <a href="/servicios.html">Consulta Servicios</a>
-        <a href="/dashboard.html">Dashboard</a>
-        <a href="/bi.html">BI</a>
-        <a href="/cierre.html">Cierre</a>
-      </nav>
-    </div>
-    <div class="app-header-right">
+<body class="has-sidebar">
+<button type="button" class="sidebar-backdrop" id="sidebarBackdrop" hidden aria-hidden="true" tabindex="-1"></button>
+<header class="app-mobile-bar" aria-label="Barra móvil">
+  <button type="button" class="app-mobile-menu-btn js-sidebar-toggle" aria-label="Abrir menú lateral" aria-expanded="false">Menú</button>
+  <span class="app-mobile-title">San Roque</span>
+</header>
+<aside class="app-sidebar" id="appSidebar" aria-label="Navegación principal">
+  <div class="sidebar-inner">
+    <nav class="sidebar-nav">
+      <ul class="sidebar-list">
+        <li>
+          <a href="/" class="sidebar-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span class="sidebar-label">Clientes</span>
+          </a>
+        </li>
+        <li>
+          <a href="/pedido.html" class="sidebar-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+            <span class="sidebar-label">Pedidos</span>
+          </a>
+        </li>
+        <li>
+          <a href="/groomers.html" class="sidebar-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span class="sidebar-label">Equipo</span>
+          </a>
+        </li>
+        <li>
+          <a href="/gastos.html" class="sidebar-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            <span class="sidebar-label">Gastos</span>
+          </a>
+        </li>
+        <li>
+          <a href="/servicios.html" class="sidebar-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <span class="sidebar-label">Consulta servicios</span>
+          </a>
+        </li>
+        <li>
+          <a href="/dashboard.html" class="sidebar-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+            <span class="sidebar-label">Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a href="/bi.html" class="sidebar-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+            <span class="sidebar-label">BI</span>
+          </a>
+        </li>
+        <li>
+          <a href="/cierre.html" class="sidebar-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M12 8v8M9 12h6"/></svg>
+            <span class="sidebar-label">Cierre</span>
+          </a>
+        </li>
+        <li>
+          <a href="/acerca.html" class="sidebar-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <span class="sidebar-label">Acerca de</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <div class="sidebar-foot">
       <span class="user-badge" id="userBadge"></span>
-      <button class="btn-logout" id="btnLogout">Salir</button>
+      <button type="button" class="btn-logout" id="btnLogout">Salir</button>
     </div>
-  </header>
+  </div>
+</aside>
 
+<div class="app-shell">
+<a href="/" class="app-floating-logo" aria-label="San Roque, inicio"><img src="/img/logo_san_roque.png" alt="San Roque" decoding="async" /></a>
   <main class="container">
     <h1>Pedidos del día</h1>
 
@@ -257,6 +310,7 @@
     </form>
   </main>
   <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
+</div>
 
   <div id="mascotaFotoLightbox" class="foto-lightbox" hidden role="dialog" aria-modal="true" aria-label="Foto ampliada">
     <div class="foto-lightbox-backdrop" id="mascotaFotoLightboxBackdrop" aria-hidden="true"></div>
@@ -266,6 +320,7 @@
       <p id="mascotaFotoLightboxError" class="foto-lightbox-error" hidden>No se pudo cargar la imagen.</p>
     </div>
   </div>
+  <script src="/sidebar.js" defer></script>
 
   <script src="/pedido.js" defer></script>
 </body>
