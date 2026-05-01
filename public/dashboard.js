@@ -204,7 +204,7 @@ async function consultarIngresos() {
   }
 }
 
-async function consultarGastos() {
+async function consultarGastos(okMessage) {
   const desde = document.getElementById('fechaDesde').value;
   const hasta = document.getElementById('fechaHasta').value;
   const piso = document.getElementById('filtroPiso').value;
@@ -227,13 +227,19 @@ async function consultarGastos() {
     const data = await resp.json();
     if (!resp.ok || !data.ok) { msg.textContent = (data?.errors?.join(', ')) || 'Error al consultar'; return; }
     const rows = data.data || [];
-    if (rows.length === 0) { msg.textContent = 'No se encontraron gastos en ese rango.'; return; }
+    if (rows.length === 0) {
+      msg.textContent = okMessage
+        ? `${okMessage} No hay gastos en este rango.`
+        : 'No se encontraron gastos en ese rango.';
+      return;
+    }
 
     let totalMonto = 0;
     for (const g of rows) {
       totalMonto += Number(g.monto || 0);
       const tr = document.createElement('tr');
       const catTxt = g.categoria === 'Otros' && g.categoria_otro ? `Otros: ${g.categoria_otro}` : (g.categoria || '-');
+      const gid = g.id != null ? Number(g.id) : null;
       tr.innerHTML = `
         <td>${formatDateSafe(g.fecha)}</td>
         <td>${g.tercero || '-'}</td>
@@ -242,6 +248,9 @@ async function consultarGastos() {
         <td>${catTxt}</td>
         <td>${g.metodo_pago || '-'}</td>
         <td>${g.piso || '-'}</td>
+        <td class="dash-actions-cell">${gid
+        ? `<button type="button" class="btn-danger btn-gasto-delete" data-gasto-id="${gid}" title="Eliminar este gasto">Eliminar</button>`
+        : '—'}</td>
       `;
       body_.appendChild(tr);
     }
@@ -250,7 +259,7 @@ async function consultarGastos() {
     trF.innerHTML = `
       <td colspan="3"><strong>TOTAL (${rows.length} gastos)</strong></td>
       <td><strong>${fmt.format(totalMonto)}</strong></td>
-      <td colspan="3"></td>
+      <td colspan="4"></td>
     `;
     foot_.appendChild(trF);
 
@@ -260,6 +269,7 @@ async function consultarGastos() {
     `;
     summary.hidden = false;
     results.hidden = false;
+    if (okMessage) msg.textContent = okMessage;
   } catch {
     msg.textContent = 'Error de red al consultar.';
   }
@@ -293,5 +303,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.querySelectorAll('.dash-tab').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  document.getElementById('dashGastosBody').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn-gasto-delete');
+    if (!btn) return;
+    const id = Number(btn.getAttribute('data-gasto-id'));
+    if (!id) return;
+    const rowLabel = btn.closest('tr')?.querySelector('td:nth-child(2)')?.textContent?.trim() || '';
+    const ok = window.confirm(
+      rowLabel
+        ? `¿Eliminar el gasto con tercero «${rowLabel}»? Esta acción no se puede deshacer.`
+        : '¿Eliminar este gasto? Esta acción no se puede deshacer.'
+    );
+    if (!ok) return;
+    btn.disabled = true;
+    const msg = document.getElementById('dashMsg');
+    try {
+      const resp = await fetch(`/api/gastos/${id}`, { method: 'DELETE' });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data.ok) {
+        msg.textContent = (data?.errors?.join(', ')) || 'No se pudo eliminar el gasto.';
+        btn.disabled = false;
+        return;
+      }
+      await consultarGastos('Gasto eliminado.');
+    } catch {
+      msg.textContent = 'Error de red al eliminar.';
+      btn.disabled = false;
+    }
   });
 });

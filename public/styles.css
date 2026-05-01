@@ -584,6 +584,14 @@ button[type="button"]:hover { background: #4b5563; color: #f9fafb; }
 }
 .txt-red { color: #f87171; }
 .txt-green { color: #34d399; }
+.dash-actions-col { width: 1%; text-align: center; }
+.dash-actions-cell {
+  text-align: center; vertical-align: middle;
+  white-space: nowrap;
+}
+.dash-table .btn-gasto-delete {
+  font-size: 0.8rem; padding: 6px 12px; cursor: pointer; border-radius: 8px;
+}
 
 /* ---- Footer ---- */
 .app-footer {
