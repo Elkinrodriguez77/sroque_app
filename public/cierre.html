@@ -207,6 +207,25 @@
       <div id="arqueoValidacion" class="arqueo-validacion" aria-live="polite" hidden></div>
     </section>
 
+    <section id="validacionDatafono" class="arqueo-caja" aria-labelledby="datafonoTitulo">
+      <h3 id="datafonoTitulo">Validación cierre Datáfono</h3>
+      <p class="arqueo-intro">El valor teórico es la columna &laquo;Cierre&raquo; del método Datáfono en el reporte del periodo (mismas fechas y piso). Ingresa el total que muestra el datáfono en tienda para comparar.</p>
+      <div class="datafono-grid">
+        <div class="datafono-field">
+          <span class="datafono-label">Datáfono en sistema (teórico)</span>
+          <strong id="datafonoTeorico" class="datafono-valor">—</strong>
+        </div>
+        <div class="arqueo-field">
+          <label for="datafonoRealInput">Total según dispositivo (real)</label>
+          <input type="text" id="datafonoRealInput" inputmode="numeric" autocomplete="off" placeholder="$ 0" />
+        </div>
+      </div>
+      <div class="arqueo-actions">
+        <button type="button" id="btnValidarDatafono" class="btn-primary">Validar Datáfono</button>
+      </div>
+      <div id="datafonoValidacion" class="arqueo-validacion" aria-live="polite" hidden></div>
+    </section>
+
     <div id="cierreMsg" class="pedidos-msg" aria-live="polite"></div>
   </main>
 

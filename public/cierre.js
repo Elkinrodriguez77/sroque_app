@@ -16,6 +16,8 @@ document.getElementById('btnLogout')?.addEventListener('click', async () => {
 const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 
 const METODO_EFECTIVO = 'Efectivo';
+/** Debe coincidir con las opciones de método de pago (boutique, pedidos, gastos). */
+const METODO_DATAFONO = 'Datáfono';
 
 /** Denominaciones de billetes COP para arqueo físico */
 const BILLETES_ARQUEO = [
@@ -37,6 +39,7 @@ const MONEDAS_ARQUEO = [
 ];
 
 let cierreEfectivoActual = null;
+let cierreDatfonoActual = null;
 
 function todayISO() {
   return new Date().toLocaleDateString('en-CA');
@@ -80,6 +83,20 @@ document.addEventListener('DOMContentLoaded', () => {
   poblarGrupoArqueo('arqueoGridMonedas', MONEDAS_ARQUEO);
   actualizarTotalArqueo();
   document.getElementById('btnValidarCierre')?.addEventListener('click', validarArqueoConCierre);
+
+  document.getElementById('btnValidarDatafono')?.addEventListener('click', validarDatafonoCierre);
+  const datafonoInp = document.getElementById('datafonoRealInput');
+  if (datafonoInp) {
+    datafonoInp.addEventListener('focus', () => {
+      const n = parseCopMoneda(datafonoInp.value);
+      datafonoInp.value = n ? String(n) : '';
+    });
+    datafonoInp.addEventListener('blur', () => {
+      const n = parseCopMoneda(datafonoInp.value);
+      datafonoInp.value = n ? fmt.format(n) : '';
+      validarDatafonoCierre();
+    });
+  }
 });
 
 async function submitBoutique(e) {
@@ -129,6 +146,12 @@ async function consultarCierre() {
   const msg = document.getElementById('cierreMsg');
   msg.textContent = '';
   cierreEfectivoActual = null;
+  cierreDatfonoActual = null;
+  const elTeoDf = document.getElementById('datafonoTeorico');
+  if (elTeoDf) elTeoDf.textContent = '—';
+  const inpDf = document.getElementById('datafonoRealInput');
+  if (inpDf) inpDf.value = '';
+  limpiarValidacionDatafono();
   const ctxArqueo = document.getElementById('cierreContextoArqueo');
   if (ctxArqueo) {
     ctxArqueo.textContent = '';
@@ -292,6 +315,11 @@ function buildCierreReport(spaRows, boutiqueRows, gastosRows, inicioMap, context
   const cierreEfectivo = efe.inicio + efe.spa + efe.boutique - efe.gastos;
   cierreEfectivoActual = cierreEfectivo;
 
+  const aggDf = agg[METODO_DATAFONO];
+  cierreDatfonoActual = aggDf ? aggDf.spa + aggDf.boutique - aggDf.gastos : 0;
+  const elTeoDf = document.getElementById('datafonoTeorico');
+  if (elTeoDf) elTeoDf.textContent = fmt.format(cierreDatfonoActual);
+
   const trFoot = document.createElement('tr');
   trFoot.innerHTML = `
     <td><strong>TOTAL</strong></td>
@@ -330,6 +358,7 @@ function buildCierreReport(spaRows, boutiqueRows, gastosRows, inicioMap, context
 
   actualizarTotalArqueo();
   limpiarMensajeValidacionArqueo();
+  limpiarValidacionDatafono();
 
   report.hidden = false;
 }
@@ -385,4 +414,54 @@ function validarArqueoConCierre() {
   box.className = 'arqueo-validacion err';
   const sign = diff > 0 ? 'Sobran' : 'Faltan';
   box.textContent = `${sign} ${fmt.format(Math.abs(diff))}: arqueo físico ${fmt.format(arqueo)} vs cierre sistema ${fmt.format(cierreEfectivoActual)}.`;
+}
+
+function parseCopMoneda(str) {
+  const digits = String(str ?? '').replace(/\D/g, '');
+  if (!digits) return 0;
+  const n = Number(digits);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function limpiarValidacionDatafono() {
+  const box = document.getElementById('datafonoValidacion');
+  if (!box) return;
+  box.textContent = '';
+  box.className = 'arqueo-validacion';
+  box.hidden = true;
+}
+
+function validarDatafonoCierre() {
+  const box = document.getElementById('datafonoValidacion');
+  const inp = document.getElementById('datafonoRealInput');
+  if (!box || !inp) return;
+
+  if (cierreDatfonoActual === null || Number.isNaN(cierreDatfonoActual)) {
+    box.hidden = false;
+    box.className = 'arqueo-validacion err';
+    box.textContent = 'Consulta el periodo primero para obtener el Datáfono teórico del sistema.';
+    return;
+  }
+
+  const raw = inp.value;
+  if (!/\d/.test(raw)) {
+    limpiarValidacionDatafono();
+    return;
+  }
+
+  const real = parseCopMoneda(raw);
+  const teorico = cierreDatfonoActual;
+  const diff = real - teorico;
+  const tol = 0;
+
+  box.hidden = false;
+  if (Math.abs(diff) <= tol) {
+    box.className = 'arqueo-validacion ok';
+    box.textContent = 'Ok';
+    return;
+  }
+
+  box.className = 'arqueo-validacion err';
+  const sign = diff > 0 ? 'Sobran' : 'Faltan';
+  box.textContent = `${sign} ${fmt.format(Math.abs(diff))}: dispositivo ${fmt.format(real)} vs sistema ${fmt.format(teorico)}.`;
 }

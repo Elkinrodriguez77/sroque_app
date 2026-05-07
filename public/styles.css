@@ -893,6 +893,20 @@ label.file-label input[type="file"] {
   background: rgba(148, 163, 184, 0.08); border: 1px solid #475569; color: #cbd5e1;
 }
 
+.datafono-grid {
+  display: grid; gap: 16px; margin-top: 8px;
+}
+@media (min-width: 560px) {
+  .datafono-grid { grid-template-columns: 1fr 1fr; align-items: end; }
+}
+.datafono-field .datafono-label {
+  display: block; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 4px;
+}
+.datafono-valor {
+  display: block; font-size: 1.2rem; color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---- Acerca de — documentación (v2 diseño destacado) ---- */
 .acerca-page {
   max-width: min(1180px, 100%);
