@@ -6,7 +6,7 @@
   <title>BI — Ventas - San Roque</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body class="has-sidebar bi-body">
@@ -39,13 +39,49 @@
 
 <div class="app-shell">
 <a href="/" class="app-floating-logo" aria-label="San Roque, inicio"><img src="/img/logo_san_roque.png" alt="San Roque" decoding="async" /></a>
-  <main class="dash-container bi-main">
-    <h1>BI — Ventas</h1>
-    <p class="bi-lead">Panel de Power&nbsp;BI embebido. Usa el scroll dentro del informe si el contenido es más alto que el área visible.</p>
+  <main class="dash-container bi-main bi-page-shell">
+    <header class="acerca-hero-pro bi-hero-compact" aria-labelledby="biHeroTitle">
+      <div class="acerca-hero-bg" aria-hidden="true"></div>
+      <div class="acerca-hero-grid">
+        <div class="acerca-hero-text">
+          <p class="acerca-badge-pill"><span class="acerca-badge-dot"></span> Inteligencia de ventas</p>
+          <h1 id="biHeroTitle" class="acerca-title-xl">BI — <span class="acerca-title-gradient">Ventas</span></h1>
+          <p class="acerca-hero-desc">Explora indicadores en un panel Power&nbsp;BI embebido. Desplázate dentro del informe cuando el contenido supere el alto visible y amplía a <strong>pantalla completa</strong> para trabajar con más comodidad.</p>
+          <div class="acerca-hero-chips">
+            <span class="acerca-chip acerca-chip-strong">Power BI</span>
+            <span class="acerca-chip">Embebido</span>
+            <span class="acerca-chip acerca-chip-soft">Vista según usuario</span>
+          </div>
+        </div>
+        <div class="acerca-hero-visual" aria-hidden="true">
+          <div class="acerca-orbit">
+            <span class="acerca-orb acerca-orb-a"></span>
+            <span class="acerca-orb acerca-orb-b"></span>
+            <span class="acerca-orb acerca-orb-c"></span>
+            <div class="acerca-hero-icon-wrap">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="url(#biHeroGrad)" stroke-width="1.35" aria-hidden="true">
+                <defs>
+                  <linearGradient id="biHeroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#a78bfa" />
+                    <stop offset="100%" stop-color="#38bdf8" />
+                  </linearGradient>
+                </defs>
+                <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+                <path d="M22 12A10 10 0 0 0 12 2v10z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
     <div class="bi-embed-shell" id="biEmbedShell">
       <div class="bi-fs-bar">
-        <button type="button" class="btn-secondary bi-fs-btn" id="btnBiFullscreen" aria-pressed="false">
-          Pantalla completa
+        <button type="button" class="bi-fs-btn bi-fs-btn-pro" id="btnBiFullscreen" aria-pressed="false">
+          <span class="bi-fs-btn-inner" aria-hidden="true">
+            <svg class="bi-fs-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+          </span>
+          <span class="bi-fs-btn-label">Pantalla completa</span>
         </button>
       </div>
       <iframe

@@ -129,21 +129,103 @@ function setRazaValue(val) {
   document.getElementById('razaValue').value = val || '';
 }
 
-// ---- Populate selects ----
-function fillSelect(selectEl, items) {
-  const current = selectEl.value;
-  const first = selectEl.options[0];
-  selectEl.innerHTML = '';
-  if (first) selectEl.appendChild(first);
-  for (const item of items) {
-    const opt = document.createElement('option');
-    opt.value = item;
-    opt.textContent = item;
-    selectEl.appendChild(opt);
-  }
-  selectEl.value = current;
+function groomerLabels() {
+  return GROOMERS_LIST.map((g) => g.label);
 }
 
+function setGroomerPickerValue(suffix, label) {
+  const hidden = document.getElementById(`groomer${suffix}Value`);
+  const search = document.getElementById(`groomer${suffix}Search`);
+  if (hidden) hidden.value = label || '';
+  if (search) search.value = label || '';
+}
+
+/** Listas filtrables tipo «Raza» para Groomer 1 y 2. */
+function initGroomerPickers() {
+  function attach(suffix) {
+    const wrapper = document.getElementById(`groomer${suffix}Wrapper`);
+    const search = document.getElementById(`groomer${suffix}Search`);
+    const hidden = document.getElementById(`groomer${suffix}Value`);
+    const dropdown = document.getElementById(`groomer${suffix}Dropdown`);
+    if (!wrapper || !search || !hidden || !dropdown) return;
+
+    function render(filter) {
+      dropdown.innerHTML = '';
+      const q = (filter || '').trim().toLowerCase();
+      const names = groomerLabels();
+      const filtered = q ? names.filter((n) => n.toLowerCase().includes(q)) : names;
+      if (filtered.length === 0) {
+        dropdown.innerHTML = '<div class="ss-empty">Sin resultados</div>';
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      for (const name of filtered) {
+        const div = document.createElement('div');
+        div.className = 'ss-option';
+        div.textContent = name;
+        div.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          pick(name);
+        });
+        frag.appendChild(div);
+      }
+      dropdown.appendChild(frag);
+    }
+
+    function pick(name) {
+      hidden.value = name;
+      search.value = name;
+      wrapper.classList.remove('open');
+    }
+
+    function syncBlur() {
+      wrapper.classList.remove('open');
+      const q = search.value.trim();
+      const names = groomerLabels();
+      if (!q) {
+        hidden.value = '';
+        search.value = '';
+        return;
+      }
+      const exact = names.find((n) => n.toLowerCase() === q.toLowerCase());
+      if (exact) {
+        hidden.value = exact;
+        search.value = exact;
+        return;
+      }
+      search.value = hidden.value || '';
+    }
+
+    search.addEventListener('focus', () => {
+      wrapper.classList.add('open');
+      render(search.value);
+    });
+
+    search.addEventListener('input', () => {
+      wrapper.classList.add('open');
+      render(search.value);
+    });
+
+    search.addEventListener('blur', syncBlur);
+
+    search.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        wrapper.classList.remove('open');
+        search.blur();
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const first = dropdown.querySelector('.ss-option');
+        if (first && !first.classList.contains('ss-empty')) pick(first.textContent);
+      }
+    });
+  }
+
+  attach('1');
+  attach('2');
+}
+
+// ---- Raza / precios ----
 function onRazaChange() {
   const raza = document.getElementById('razaValue').value;
   const tamanoSelect = document.getElementById('tamanoSelect');
@@ -430,6 +512,7 @@ async function submitPedido(event) {
 
     form.reset();
     setRazaValue('');
+    syncPisoRequiredValidity();
     document.getElementById('precioSugerido').hidden = true;
     document.getElementById('mixtoWrapper').hidden = true;
     document.getElementById('adicInfoPopup').hidden = true;
@@ -583,6 +666,7 @@ async function cargarPedidoEnFormulario(p) {
   form.elements['telefono_acudiente'].value = p.telefono_acudiente || '';
   form.elements['fecha_hora'].value = p.fecha_hora ? new Date(p.fecha_hora).toISOString().slice(0, 16) : '';
   form.elements['piso'].value = p.piso || '';
+  syncPisoRequiredValidity();
   document.getElementById('nombreMascota').value = p.nombre_mascota || '';
   setRazaValue(p.raza || '');
   document.getElementById('tamanoSelect').value = normalizeTamano(p.tamano || '');
@@ -606,8 +690,8 @@ async function cargarPedidoEnFormulario(p) {
 
   form.elements['precio'].value = (p.precio != null) ? p.precio : 0;
   form.elements['adicionales_descuentos'].value = (p.adicionales_descuentos != null) ? p.adicionales_descuentos : 0;
-  document.getElementById('groomer1Select').value = p.groomer1 || '';
-  document.getElementById('groomer2Select').value = p.groomer2 || '';
+  setGroomerPickerValue('1', p.groomer1 || '');
+  setGroomerPickerValue('2', p.groomer2 || '');
   updateMoney();
   document.getElementById('precioSugerido').hidden = true;
   suggestPrice();
@@ -707,6 +791,7 @@ async function eliminarPedido(p) {
       form.reset();
       form.elements['id'].value = '';
       setRazaValue('');
+      syncPisoRequiredValidity();
       updateMoney();
       document.getElementById('precioSugerido').hidden = true;
       document.getElementById('mixtoWrapper').hidden = true;
@@ -735,6 +820,7 @@ async function cerrarPedido(id) {
     const form = document.getElementById('pedidoForm');
     form.reset();
     setRazaValue('');
+    syncPisoRequiredValidity();
     updateMoney();
     document.getElementById('precioSugerido').hidden = true;
     document.getElementById('mixtoWrapper').hidden = true;
@@ -768,18 +854,22 @@ async function loadGroomers() {
       GROOMERS_LIST = data.map(g => ({ id: g.id, label: `${g.nombre} ${g.apellido}` }));
     }
   } catch { /* silent */ }
-  const names = GROOMERS_LIST.map(g => g.label);
-  fillSelect(document.getElementById('groomer1Select'), names);
-  fillSelect(document.getElementById('groomer2Select'), names);
 }
 
 function validateGroomers() {
-  const g1 = document.getElementById('groomer1Select').value;
-  const g2 = document.getElementById('groomer2Select').value;
+  const g1 = (document.getElementById('groomer1Value')?.value || '').trim();
+  const g2 = (document.getElementById('groomer2Value')?.value || '').trim();
   if (g1 && g2 && g1 === g2) {
     return 'El Groomer 2 no puede ser igual al Groomer 1.';
   }
   return null;
+}
+
+/** Mensaje en español para validación nativa del select Piso (required). */
+function syncPisoRequiredValidity() {
+  const pisoSel = document.getElementById('pisoSelect');
+  if (!pisoSel) return;
+  pisoSel.setCustomValidity(pisoSel.value.trim() ? '' : 'Selecciona el piso.');
 }
 
 function init() {
@@ -794,6 +884,7 @@ function init() {
 
   loadGroomers();
   initRazaDropdown();
+  initGroomerPickers();
 
   document.getElementById('servicioSelect').addEventListener('change', onServicioChange);
   document.getElementById('tamanoSelect').addEventListener('change', suggestPrice);
@@ -801,6 +892,11 @@ function init() {
   document.getElementById('tipoMascotaSelect').addEventListener('change', suggestPrice);
   document.getElementById('pedidoForm').addEventListener('submit', submitPedido);
   document.getElementById('btnBuscarPedidos').addEventListener('click', buscarPedidos);
+  const pisoSel = document.getElementById('pisoSelect');
+  if (pisoSel) {
+    syncPisoRequiredValidity();
+    pisoSel.addEventListener('change', syncPisoRequiredValidity);
+  }
   document.getElementById('pedidoForm').elements['precio'].addEventListener('input', updateMoney);
   document.getElementById('pedidoForm').elements['adicionales_descuentos'].addEventListener('input', updateMoney);
   const telPropietario = document.getElementById('pedidoForm').elements['telefono_propietario'];

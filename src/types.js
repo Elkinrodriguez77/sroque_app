@@ -103,8 +103,12 @@ function sanitizePedidoInput(input) {
 
 function validatePedido(pedido) {
   const errors = [];
+  const pisosValidos = ['Piso 1', 'Piso 2'];
   if (!pedido.telefono_propietario) errors.push('telefono_propietario es requerido');
   if (!pedido.servicio) errors.push('servicio es requerido');
+  if (!pedido.piso || !pisosValidos.includes(pedido.piso)) {
+    errors.push('Piso es requerido');
+  }
   return errors;
 }
 

@@ -44,7 +44,10 @@ function biIsFullscreen() {
 function biSyncFullscreenButton() {
   if (!btnFs) return;
   const on = biIsFullscreen();
-  btnFs.textContent = on ? 'Vista normal' : 'Pantalla completa';
+  const label = btnFs.querySelector('.bi-fs-btn-label');
+  const text = on ? 'Vista normal' : 'Pantalla completa';
+  if (label) label.textContent = text;
+  else btnFs.textContent = text;
   btnFs.setAttribute('aria-pressed', on ? 'true' : 'false');
   btnFs.setAttribute('aria-label', on ? 'Salir de pantalla completa' : 'Ver informe en pantalla completa');
 }
