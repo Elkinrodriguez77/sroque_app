@@ -1,3 +1,9 @@
+const BI_SUPERADMIN_USER = 'kathe_superadmin';
+const BI_URL_SUPERADMIN =
+  'https://app.powerbi.com/view?r=eyJrIjoiNGVkNjk3MTAtNzdiZS00OWNiLWIzMzUtOTUxNWI1Njc5NTA4IiwidCI6IjM2M2I4NjhjLWJjNGEtNGFlMS05NDA1LWNiNWRjMzlmMDk2NyIsImMiOjR9';
+const BI_URL_DEFAULT =
+  'https://app.powerbi.com/view?r=eyJrIjoiMzYzYjE1NmYtZWJmZC00MmIwLTg3NTctYjdkYjBlNzkxZmRlIiwidCI6IjM2M2I4NjhjLWJjNGEtNGFlMS05NDA1LWNiNWRjMzlmMDk2NyIsImMiOjR9';
+
 (async function loadSession() {
   try {
     const r = await fetch('/api/me');
@@ -5,6 +11,13 @@
     const { nombre, username } = await r.json();
     const badge = document.getElementById('userBadge');
     if (badge) badge.textContent = nombre || username || '';
+
+    const iframe = document.getElementById('biEmbedFrame');
+    if (iframe) {
+      const isSuper = username === BI_SUPERADMIN_USER;
+      iframe.title = isSuper ? 'SanRoque_BI' : 'SanRoqueAdmin_BI';
+      iframe.src = isSuper ? BI_URL_SUPERADMIN : BI_URL_DEFAULT;
+    }
   } catch { window.location.href = '/login.html'; }
 })();
 document.getElementById('btnLogout')?.addEventListener('click', async () => {
