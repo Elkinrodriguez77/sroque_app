@@ -91,6 +91,7 @@ function initRazaDropdown() {
     search.value = raza;
     wrapper.classList.remove('open');
     onRazaChange();
+    syncRazaRequiredValidity();
   }
 
   search.addEventListener('focus', () => {
@@ -102,6 +103,7 @@ function initRazaDropdown() {
     wrapper.classList.add('open');
     render(search.value);
     hidden.value = search.value;
+    syncRazaRequiredValidity();
   });
 
   search.addEventListener('blur', () => {
@@ -109,6 +111,7 @@ function initRazaDropdown() {
     if (search.value && !RAZAS.includes(search.value)) {
       hidden.value = search.value;
     }
+    syncRazaRequiredValidity();
   });
 
   search.addEventListener('keydown', (e) => {
@@ -127,6 +130,7 @@ function initRazaDropdown() {
 function setRazaValue(val) {
   document.getElementById('razaSearch').value = val || '';
   document.getElementById('razaValue').value = val || '';
+  syncRazaRequiredValidity();
 }
 
 function groomerLabels() {
@@ -238,6 +242,7 @@ function onRazaChange() {
 function onServicioChange() {
   const s = document.getElementById('servicioSelect').value;
   document.getElementById('servicioOtroWrapper').hidden = s !== 'OTRO';
+  syncServicioRequiredValidity();
   suggestPrice();
 }
 
@@ -438,6 +443,8 @@ async function eliminarFotoGuardadaMascota() {
 async function submitPedido(event) {
   event.preventDefault();
   const form = event.currentTarget;
+  syncAllPedidoConstraints();
+  if (!form.reportValidity()) return;
   const fotoInput = document.getElementById('mascotaFotoInput');
   const fotoFile = fotoInput.files && fotoInput.files[0] ? fotoInput.files[0] : null;
   const data = Object.fromEntries(new FormData(form).entries());
@@ -512,13 +519,14 @@ async function submitPedido(event) {
 
     form.reset();
     setRazaValue('');
-    syncPisoRequiredValidity();
     document.getElementById('precioSugerido').hidden = true;
     document.getElementById('mixtoWrapper').hidden = true;
     document.getElementById('adicInfoPopup').hidden = true;
 
     form.elements['telefono_propietario'].value = keepTel;
     form.elements['telefono_acudiente'].value = keepAcud;
+
+    syncAllPedidoConstraints();
 
     await buscarPedidos();
 
@@ -666,7 +674,6 @@ async function cargarPedidoEnFormulario(p) {
   form.elements['telefono_acudiente'].value = p.telefono_acudiente || '';
   form.elements['fecha_hora'].value = p.fecha_hora ? new Date(p.fecha_hora).toISOString().slice(0, 16) : '';
   form.elements['piso'].value = p.piso || '';
-  syncPisoRequiredValidity();
   document.getElementById('nombreMascota').value = p.nombre_mascota || '';
   setRazaValue(p.raza || '');
   document.getElementById('tamanoSelect').value = normalizeTamano(p.tamano || '');
@@ -708,6 +715,7 @@ async function cargarPedidoEnFormulario(p) {
 
   document.getElementById('mascotaFotoInput').value = '';
   refreshMascotaFotoPreview();
+  syncAllPedidoConstraints();
 }
 
 function prefillPhones() {
@@ -719,6 +727,7 @@ function prefillPhones() {
   if (telProp) document.getElementById('filtroTelefono').value = telProp;
   if (telProp || telAcud) {
     history.replaceState({}, '', window.location.pathname);
+    syncTelefonoPropietarioValidity();
   }
 }
 
@@ -754,6 +763,7 @@ async function onMascotaChange() {
     tipoSel.value = '';
     suggestPrice();
     refreshMascotaFotoPreview();
+    syncAllPedidoConstraints();
     return;
   }
   let m = MASCOTAS.find((x) => String(x.id) === String(id));
@@ -762,7 +772,10 @@ async function onMascotaChange() {
     document.getElementById('mascotaSelect').value = id;
     m = MASCOTAS.find((x) => String(x.id) === String(id));
   }
-  if (!m) return;
+  if (!m) {
+    syncAllPedidoConstraints();
+    return;
+  }
   document.getElementById('nombreMascota').value = m.nombre_mascota || '';
   setRazaValue(m.raza || '');
   document.getElementById('tamanoSelect').value = normalizeTamano(m.tamano || '');
@@ -770,6 +783,7 @@ async function onMascotaChange() {
   tipoSel.value = m.tipo_mascota || '';
   suggestPrice();
   refreshMascotaFotoPreview();
+  syncAllPedidoConstraints();
 }
 
 async function eliminarPedido(p) {
@@ -791,7 +805,7 @@ async function eliminarPedido(p) {
       form.reset();
       form.elements['id'].value = '';
       setRazaValue('');
-      syncPisoRequiredValidity();
+      syncAllPedidoConstraints();
       updateMoney();
       document.getElementById('precioSugerido').hidden = true;
       document.getElementById('mixtoWrapper').hidden = true;
@@ -820,7 +834,7 @@ async function cerrarPedido(id) {
     const form = document.getElementById('pedidoForm');
     form.reset();
     setRazaValue('');
-    syncPisoRequiredValidity();
+    syncAllPedidoConstraints();
     updateMoney();
     document.getElementById('precioSugerido').hidden = true;
     document.getElementById('mixtoWrapper').hidden = true;
@@ -872,6 +886,39 @@ function syncPisoRequiredValidity() {
   pisoSel.setCustomValidity(pisoSel.value.trim() ? '' : 'Selecciona el piso.');
 }
 
+/** Validación HTML5 (`required`): mensajes en español. */
+function syncTelefonoPropietarioValidity() {
+  const el = document.querySelector('#pedidoForm [name="telefono_propietario"]');
+  if (!el) return;
+  el.setCustomValidity(el.value.trim() ? '' : 'Ingresa el teléfono del propietario.');
+}
+
+function syncTipoRequiredValidity() {
+  const el = document.getElementById('tipoMascotaSelect');
+  if (!el) return;
+  el.setCustomValidity(el.value.trim() ? '' : 'Selecciona Perro o Gato.');
+}
+
+function syncServicioRequiredValidity() {
+  const el = document.getElementById('servicioSelect');
+  if (!el) return;
+  el.setCustomValidity(el.value.trim() ? '' : 'Selecciona un servicio.');
+}
+
+function syncRazaRequiredValidity() {
+  const h = document.getElementById('razaValue');
+  if (!h) return;
+  h.setCustomValidity((h.value || '').trim() ? '' : 'Indica la raza.');
+}
+
+function syncAllPedidoConstraints() {
+  syncTelefonoPropietarioValidity();
+  syncPisoRequiredValidity();
+  syncTipoRequiredValidity();
+  syncServicioRequiredValidity();
+  syncRazaRequiredValidity();
+}
+
 function init() {
   fetch('/api/catalogos/raza-tamano')
     .then(r => r.json()).then(({ ok, data }) => {
@@ -889,19 +936,28 @@ function init() {
   document.getElementById('servicioSelect').addEventListener('change', onServicioChange);
   document.getElementById('tamanoSelect').addEventListener('change', suggestPrice);
   document.getElementById('pelajeSelect').addEventListener('change', suggestPrice);
-  document.getElementById('tipoMascotaSelect').addEventListener('change', suggestPrice);
+  document.getElementById('tipoMascotaSelect').addEventListener('change', () => {
+    suggestPrice();
+    syncTipoRequiredValidity();
+  });
   document.getElementById('pedidoForm').addEventListener('submit', submitPedido);
   document.getElementById('btnBuscarPedidos').addEventListener('click', buscarPedidos);
   const pisoSel = document.getElementById('pisoSelect');
   if (pisoSel) {
-    syncPisoRequiredValidity();
+    syncAllPedidoConstraints();
     pisoSel.addEventListener('change', syncPisoRequiredValidity);
   }
   document.getElementById('pedidoForm').elements['precio'].addEventListener('input', updateMoney);
   document.getElementById('pedidoForm').elements['adicionales_descuentos'].addEventListener('input', updateMoney);
   const telPropietario = document.getElementById('pedidoForm').elements['telefono_propietario'];
-  telPropietario.addEventListener('change', () => { void cargarMascotasPorTelefono(); });
+  const onTelPropChange = () => {
+    syncTelefonoPropietarioValidity();
+    void cargarMascotasPorTelefono();
+  };
+  telPropietario.addEventListener('input', syncTelefonoPropietarioValidity);
+  telPropietario.addEventListener('change', onTelPropChange);
   telPropietario.addEventListener('blur', () => {
+    syncTelefonoPropietarioValidity();
     if (telPropietario.value.trim()) void cargarMascotasPorTelefono();
   });
   document.getElementById('mascotaSelect').addEventListener('change', () => { void onMascotaChange(); });

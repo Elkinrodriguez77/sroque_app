@@ -111,7 +111,7 @@
           <fieldset>
             <legend>Datos del contacto</legend>
             <div class="pedido-inline-fields">
-              <label>Teléfono propietario
+              <label>Teléfono propietario *
                 <input name="telefono_propietario" type="tel" maxlength="20" required />
               </label>
               <label>Teléfono acudiente
@@ -121,7 +121,7 @@
             <label>Fecha y hora
               <input name="fecha_hora" type="datetime-local" />
             </label>
-            <label>Piso
+            <label>Piso *
               <select name="piso" id="pisoSelect" required>
                 <option value="">Seleccione...</option>
                 <option value="Piso 1">Piso 1</option>
@@ -146,8 +146,8 @@
               <label>Nombre de la mascota
                 <input id="nombreMascota" name="nombre_mascota" type="text" maxlength="200" placeholder="Nombre" />
               </label>
-              <label>Tipo
-                <select id="tipoMascotaSelect" name="tipo_mascota">
+              <label>Tipo *
+                <select id="tipoMascotaSelect" name="tipo_mascota" required>
                   <option value="">Seleccione...</option>
                   <option value="Perro">Perro</option>
                   <option value="Gato">Gato</option>
@@ -156,10 +156,10 @@
             </div>
             <p class="hint" style="margin:-8px 0 4px">El precio sugerido usa tipo + pelaje (manto corto vs medio/largo) + tamaño (solo perros).</p>
 
-            <label>Raza
+            <label>Raza *
               <div class="searchable-select" id="razaWrapper">
-                <input type="text" id="razaSearch" class="searchable-input" placeholder="Escribe para buscar raza..." autocomplete="off" />
-                <input type="hidden" name="raza" id="razaValue" />
+                <input type="text" id="razaSearch" class="searchable-input" placeholder="Escribe para buscar raza..." autocomplete="off" aria-required="true" />
+                <input type="hidden" name="raza" id="razaValue" required />
                 <div class="searchable-dropdown" id="razaDropdown"></div>
               </div>
             </label>
@@ -185,8 +185,8 @@
               </label>
             </div>
 
-            <label>Servicio
-              <select name="servicio" id="servicioSelect">
+            <label>Servicio *
+              <select name="servicio" id="servicioSelect" required>
                 <option value="">Seleccione...</option>
                 <option value="SanRoquero">SanRoquero</option>
                 <option value="Rockstar">Rockstar</option>
@@ -332,7 +332,7 @@
       <div class="pedido-form-footer">
         <label class="checkbox-label">
           <input type="checkbox" name="acepta_terminos" id="aceptaTerminos" required />
-          <span>Acepta términos y condiciones de pedido</span>
+          <span>Acepta términos y condiciones de pedido *</span>
         </label>
 
         <div id="pedidoErrors" class="errors" aria-live="polite"></div>
