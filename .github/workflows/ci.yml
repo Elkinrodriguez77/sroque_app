@@ -62,16 +62,23 @@ jobs:
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
-          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
-            echo "Falta el secret RENDER_DEPLOY_HOOK_URL. Configúralo en GitHub → Settings → Secrets."
+          # Quitar posibles espacios/saltos de línea al copiar el secret.
+          HOOK="$(printf '%s' "$RENDER_DEPLOY_HOOK_URL" | tr -d '[:space:]')"
+          if [ -z "$HOOK" ]; then
+            echo "::error::Falta el secret RENDER_DEPLOY_HOOK_URL (vacío o no configurado)."
+            echo "Revísalo en GitHub → Settings → Secrets and variables → Actions → pestaña 'Secrets' (no 'Variables')."
             exit 1
           fi
-          echo "Validación OK. Disparando deploy en Render..."
-          http_code=$(curl -s -o /dev/null -w "%{http_code}" "$RENDER_DEPLOY_HOOK_URL")
+          echo "Secret presente (longitud: ${#HOOK}). Disparando deploy en Render..."
+          # -L sigue redirecciones; capturamos código y cuerpo para diagnóstico.
+          http_code=$(curl -sS -L -X POST -o /tmp/render_resp.txt -w "%{http_code}" "$HOOK" || echo "000")
           echo "Render respondió HTTP $http_code"
-          # Render devuelve 200 (o 201) cuando acepta el deploy.
-          if [ "$http_code" != "200" ] && [ "$http_code" != "201" ]; then
-            echo "El deploy hook no respondió OK."
-            exit 1
-          fi
-          echo "Deploy disparado correctamente."
+          echo "Respuesta: $(cat /tmp/render_resp.txt 2>/dev/null | head -c 300)"
+          # Aceptamos cualquier 2xx como deploy aceptado.
+          case "$http_code" in
+            2*) echo "✅ Deploy disparado correctamente." ;;
+            401|403) echo "::error::El hook respondió $http_code (no autorizado). La URL del secret parece incorrecta o incompleta."; exit 1 ;;
+            404) echo "::error::El hook respondió 404. El identificador del servicio en la URL no existe (¿URL mal copiada?)."; exit 1 ;;
+            000) echo "::error::No se pudo conectar con Render (URL inválida o sin red)."; exit 1 ;;
+            *)   echo "::error::El deploy hook no respondió OK (HTTP $http_code)."; exit 1 ;;
+          esac
