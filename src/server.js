@@ -385,6 +385,16 @@ app.get('/api/dashboard/pedidos', async (req, res) => {
 
 // -------- Histórico CSV (datos Excel) --------
 let csvHistorico = [];
+
+/** Convierte un texto del CSV a número (o null si está vacío/no numérico). */
+function parseNumCsv(v) {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (s === '') return null;
+  const n = Number(s.replace(/[^0-9.\-]/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
 (function loadCSV() {
   try {
     const csvPath = path.join(__dirname, '..', 'recursos', 'datos_historicos.csv');
@@ -393,13 +403,30 @@ let csvHistorico = [];
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(';');
       if (cols.length < 5) continue;
-      const [fechaRaw, nombre_mascota, nombre_propietario, servicio, telefono] = cols;
+      // Columnas: fecha;nombre_mascota;nombre_propietario;servicio;telefono;precio;adicionales;precio_final;groomer
+      const [fechaRaw, nombre_mascota, nombre_propietario, servicio, telefono, precio, adicionales, precioFinal, groomer] = cols;
       const parts = fechaRaw.split('/');
       let fechaISO = fechaRaw;
       if (parts.length === 3) {
         fechaISO = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
       }
-      csvHistorico.push({ fecha: fechaISO, nombre_mascota: nombre_mascota.trim(), nombre_propietario: nombre_propietario.trim(), servicio: servicio.trim(), telefono: telefono.trim() });
+      const precioNum = parseNumCsv(precio);
+      const adicionalesNum = parseNumCsv(adicionales);
+      let precioFinalNum = parseNumCsv(precioFinal);
+      if (precioFinalNum == null && (precioNum != null || adicionalesNum != null)) {
+        precioFinalNum = (precioNum || 0) + (adicionalesNum || 0);
+      }
+      csvHistorico.push({
+        fecha: fechaISO,
+        nombre_mascota: nombre_mascota.trim(),
+        nombre_propietario: nombre_propietario.trim(),
+        servicio: servicio.trim(),
+        telefono: telefono.trim(),
+        precio: precioNum,
+        adicionales: adicionalesNum,
+        precio_final: precioFinalNum,
+        groomer: (groomer || '').trim(),
+      });
     }
     csvHistorico.sort((a, b) => b.fecha.localeCompare(a.fecha));
     console.log(`CSV histórico cargado: ${csvHistorico.length} registros`);
@@ -426,9 +453,86 @@ app.get('/api/historico/buscar-mascotas', (req, res) => {
 app.get('/api/historico/servicios', (req, res) => {
   const mascota = (req.query.mascota || '').trim();
   const tel = (req.query.telefono || '').trim();
-  if (!mascota || !tel) return res.status(400).json({ ok: false, errors: ['mascota y telefono son requeridos'] });
-  const rows = csvHistorico.filter(r => r.nombre_mascota === mascota && r.telefono === tel);
+  // El teléfono es opcional: hay registros históricos sin teléfono. Se hace match
+  // por nombre de mascota y, si viene teléfono, también por teléfono (vacío con vacío).
+  if (!mascota) return res.status(400).json({ ok: false, errors: ['mascota es requerida'] });
+  const rows = csvHistorico.filter(r => r.nombre_mascota === mascota && (r.telefono || '') === tel);
   res.json({ ok: true, data: rows });
+});
+
+// -------- Búsqueda unificada por nombre de mascota (Clientes / Pedidos) --------
+// El objetivo es resolver un TELÉFONO a partir del nombre de la mascota.
+// Combina Sistema (BD) + histórico CSV, descarta registros sin teléfono
+// (no sirven para crear cliente/pedido) y deduplica por teléfono + nombre.
+app.get('/api/buscar/mascotas-telefono', async (req, res) => {
+  try {
+    const nombre = String(req.query.nombre || '').trim();
+    if (nombre.length < 2) {
+      return res.status(400).json({ ok: false, errors: ['Escribe al menos 2 caracteres'] });
+    }
+    const LIMIT = 50;
+    const q = nombre.toLowerCase();
+    const map = new Map(); // clave: telefono|nombre_mascota_lower
+
+    function add(nombre_mascota, nombre_propietario, telefono, origen) {
+      const tel = String(telefono || '').trim();
+      if (!tel) return; // sin teléfono no es accionable
+      const nm = String(nombre_mascota || '').trim();
+      const key = `${tel}|${nm.toLowerCase()}`;
+      const prev = map.get(key);
+      if (!prev) {
+        map.set(key, {
+          nombre_mascota: nm,
+          nombre_propietario: String(nombre_propietario || '').trim(),
+          telefono: tel,
+          origenes: new Set([origen]),
+        });
+      } else {
+        prev.origenes.add(origen);
+        // El dato del Sistema es más completo: si llega, completa el propietario.
+        if (origen === 'Sistema' && nombre_propietario) {
+          prev.nombre_propietario = String(nombre_propietario).trim();
+        }
+      }
+    }
+
+    // Sistema (BD)
+    try {
+      const sistema = await searchMascotasByNombre(nombre);
+      for (const m of sistema) add(m.nombre_mascota, m.nombre_propietario, m.telefono_propietario, 'Sistema');
+    } catch (e) {
+      console.error('Buscar mascotas (sistema):', e);
+    }
+
+    // Histórico CSV
+    for (const r of csvHistorico) {
+      if (r.telefono && r.nombre_mascota.toLowerCase().includes(q)) {
+        add(r.nombre_mascota, r.nombre_propietario, r.telefono, 'Histórico');
+      }
+    }
+
+    const all = Array.from(map.values()).map((x) => ({
+      nombre_mascota: x.nombre_mascota,
+      nombre_propietario: x.nombre_propietario,
+      telefono: x.telefono,
+      origen: x.origenes.has('Sistema') && x.origenes.has('Histórico')
+        ? 'Ambos'
+        : (x.origenes.has('Sistema') ? 'Sistema' : 'Histórico'),
+    }));
+    // Sistema primero, luego alfabético por nombre de mascota.
+    all.sort((a, b) => {
+      const rank = (o) => (o === 'Ambos' ? 0 : o === 'Sistema' ? 1 : 2);
+      const dr = rank(a.origen) - rank(b.origen);
+      if (dr !== 0) return dr;
+      return a.nombre_mascota.localeCompare(b.nombre_mascota, 'es');
+    });
+
+    const total = all.length;
+    res.json({ ok: true, data: all.slice(0, LIMIT), total, truncated: total > LIMIT });
+  } catch (e) {
+    console.error('Buscar mascotas-telefono error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
 });
 
 // -------- Servicios (historial por mascota) --------

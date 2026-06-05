@@ -89,13 +89,14 @@
 
     <section class="pedido-search-card" aria-label="Búsqueda de pedidos">
       <fieldset>
-        <legend>Buscar pedidos por teléfono (propietario o acudiente)</legend>
-        <p class="hint">Se listan los pedidos de <strong>hoy</strong> (abiertos y cerrados) para poder corregir duplicados entre pisos.</p>
+        <legend>Buscar por teléfono o nombre de mascota</legend>
+        <p class="hint">Escribe un <strong>teléfono</strong> (propietario o acudiente) o el <strong>nombre de una mascota</strong>. Se listan los pedidos de <strong>hoy</strong> (abiertos y cerrados) para poder corregir duplicados entre pisos.</p>
         <div class="pedido-search-row">
-          <input id="filtroTelefono" type="tel" maxlength="20" placeholder="Ej: 3001234567" />
+          <input id="filtroTelefono" type="text" maxlength="200" placeholder="Ej: 3001234567 o Toby" />
           <button id="btnBuscarPedidos" type="button" class="btn-primary">Buscar</button>
         </div>
         <div id="pedidosMsg" class="pedidos-msg" aria-live="polite"></div>
+        <ul id="resultadosMascota" class="bm-list" hidden></ul>
         <ul id="listaPedidos"></ul>
       </fieldset>
     </section>
@@ -356,6 +357,7 @@
   </div>
   <script src="/sidebar.js" defer></script>
 
+  <script src="/buscar-mascota.js" defer></script>
   <script src="/pedido.js" defer></script>
 </body>
 </html>

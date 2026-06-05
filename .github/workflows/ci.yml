@@ -1,0 +1,77 @@
+name: CI / Deploy
+
+# Valida en cada push y en cada Pull Request hacia main.
+# El deploy en Render SOLO se dispara si la validación pasa y es un push a main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Si se empujan varios commits seguidos, cancela los runs viejos en curso.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validar (instalar, sintaxis, arranque)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # npm ci instala EXACTAMENTE lo del package-lock.json y falla si el lock
+      # está desincronizado con package.json. Es la instalación reproducible.
+      - name: Instalar dependencias (npm ci)
+        run: npm ci
+
+      # Chequeo de sintaxis de todos los .js de src/ y scripts/ sin ejecutarlos.
+      - name: Validar sintaxis
+        run: |
+          set -e
+          for f in $(find src scripts -name '*.js'); do
+            node --check "$f"
+          done
+          echo "Sintaxis OK"
+
+      # Arranca el servidor de verdad y comprueba que responde (sin tocar la BD).
+      - name: Smoke test de arranque
+        run: npm test
+
+      # Informativo: lista vulnerabilidades pero NO bloquea el deploy, para que
+      # un advisory nuevo no impida un despliegue urgente. Revísalo de todas formas.
+      - name: Auditoría de seguridad (informativa)
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+  deploy:
+    name: Desplegar en Render
+    needs: validate
+    runs-on: ubuntu-latest
+    # Solo en push directo a main (no en Pull Requests).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Disparar deploy hook de Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "Falta el secret RENDER_DEPLOY_HOOK_URL. Configúralo en GitHub → Settings → Secrets."
+            exit 1
+          fi
+          echo "Validación OK. Disparando deploy en Render..."
+          http_code=$(curl -s -o /dev/null -w "%{http_code}" "$RENDER_DEPLOY_HOOK_URL")
+          echo "Render respondió HTTP $http_code"
+          # Render devuelve 200 (o 201) cuando acepta el deploy.
+          if [ "$http_code" != "200" ] && [ "$http_code" != "201" ]; then
+            echo "El deploy hook no respondió OK."
+            exit 1
+          fi
+          echo "Deploy disparado correctamente."

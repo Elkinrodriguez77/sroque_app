@@ -43,12 +43,13 @@
     <h1>Registro de Clientes</h1>
     <section id="searchSection">
       <fieldset>
-        <legend>Buscar cliente por teléfono</legend>
-        <label>Teléfono propietario
-          <input id="buscarTelefono" type="tel" maxlength="20" placeholder="Ej: 3001234567" />
+        <legend>Buscar cliente por teléfono o nombre de mascota</legend>
+        <label>Teléfono o nombre de mascota
+          <input id="buscarTelefono" type="text" maxlength="200" placeholder="Ej: 3001234567 o Toby" />
         </label>
         <button id="btnBuscar" type="button" class="btn-primary">Buscar</button>
         <div id="lookupMsg" class="errors" aria-live="polite"></div>
+        <ul id="resultadosMascota" class="bm-list" hidden></ul>
         <div id="lookupOptions" hidden>
           <p>Cliente encontrado.</p>
           <button id="btnPedido" type="button">Registrar pedido / servicio</button>
@@ -121,6 +122,7 @@
   <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
 </div>
   <script src="/sidebar.js" defer></script>
+  <script src="/buscar-mascota.js" defer></script>
   <script src="/main.js" defer></script>
 </body>
 </html>

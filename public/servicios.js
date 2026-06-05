@@ -15,6 +15,70 @@ document.getElementById('btnLogout')?.addEventListener('click', async () => {
 
 let currentSource = 'sistema';
 
+const fmtMoneda = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+
+/** Formatea un valor monetario; devuelve '-' si no hay dato. */
+function money(v) {
+  if (v == null || v === '') return '-';
+  const n = Number(v);
+  return Number.isFinite(n) ? fmtMoneda.format(n) : '-';
+}
+
+/** Agrega a un <li> de resultado un botón para copiar el teléfono al portapapeles. */
+function addCopyTelBtn(li, telefono) {
+  const tel = String(telefono || '').trim();
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn-copy-tel';
+  if (!tel) {
+    btn.textContent = 'Sin teléfono';
+    btn.disabled = true;
+    li.appendChild(btn);
+    return;
+  }
+  btn.textContent = '📋 Copiar';
+  btn.title = `Copiar teléfono ${tel}`;
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation(); // no seleccionar la mascota al copiar
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(tel);
+      ok = true;
+    } catch {
+      // Fallback para navegadores/contextos sin Clipboard API
+      const ta = document.createElement('textarea');
+      ta.value = tel;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ok = document.execCommand('copy'); } catch { ok = false; }
+      document.body.removeChild(ta);
+    }
+    btn.textContent = ok ? '✓ Copiado' : 'Error';
+    btn.classList.toggle('copied', ok);
+    setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 1500);
+  });
+  li.appendChild(btn);
+}
+
+/** Agrega una fila de servicio a la tabla (columnas comunes a Sistema y Excel). */
+function appendServicioRow(body, { fecha, servicio, precio, adicionales, precioFinal, groomer }) {
+  const tr = document.createElement('tr');
+  const tieneAdic = adicionales != null && adicionales !== '';
+  const adicNum = Number(adicionales || 0);
+  const adicClass = tieneAdic ? (adicNum < 0 ? 'txt-red' : 'txt-green') : '';
+  tr.innerHTML = `
+    <td>${fecha}</td>
+    <td>${esc(servicio || '-')}</td>
+    <td>${money(precio)}</td>
+    <td class="${adicClass}">${money(adicionales)}</td>
+    <td><strong>${money(precioFinal)}</strong></td>
+    <td>${esc(groomer || '-')}</td>
+  `;
+  body.appendChild(tr);
+}
+
 function switchSource(source) {
   currentSource = source;
   document.querySelectorAll('.dash-mode').forEach(b => b.classList.toggle('active', b.dataset.source === source));
@@ -22,8 +86,6 @@ function switchSource(source) {
   document.getElementById('pedidosList').hidden = true;
   document.getElementById('serviciosMsg').textContent = '';
   document.getElementById('nombreMascota').value = '';
-  document.getElementById('thGroomer').textContent = source === 'sistema' ? 'Groomer' : '';
-  document.getElementById('thGroomer').hidden = source !== 'sistema';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -81,6 +143,7 @@ async function buscarSistema() {
         <span class="mascota-prop">Propietario: ${esc(m.nombre_propietario || '-')}</span>
         <span class="mascota-tel mascota-tel-key">Tel: ${esc(m.telefono_propietario || '-')}</span>
       `;
+      addCopyTelBtn(li, m.telefono_propietario);
       li.addEventListener('click', () => seleccionarSistema(m));
       mascotasUl.appendChild(li);
     });
@@ -120,16 +183,17 @@ async function seleccionarSistema(mascota) {
     }
 
     pedidos.forEach((p) => {
-      const tr = document.createElement('tr');
       const fechaHora = p.fecha_hora
         ? new Date(p.fecha_hora).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
         : '-';
-      tr.innerHTML = `
-        <td>${fechaHora}</td>
-        <td>${esc(p.servicio || '-')}</td>
-        <td>${esc(p.groomer1 || '-')}</td>
-      `;
-      serviciosBody.appendChild(tr);
+      appendServicioRow(serviciosBody, {
+        fecha: fechaHora,
+        servicio: p.servicio,
+        precio: p.precio,
+        adicionales: p.adicionales_descuentos,
+        precioFinal: p.precio_final,
+        groomer: p.groomer1,
+      });
     });
   } catch {
     msg.innerHTML = '<span style="color:#f87171">Error de red al cargar servicios.</span>';
@@ -175,6 +239,7 @@ async function buscarExcel() {
         <span class="mascota-prop">Propietario: ${esc(m.nombre_propietario || '-')}</span>
         <span class="mascota-tel mascota-tel-key">Tel: ${esc(m.telefono || '-')}</span>
       `;
+      addCopyTelBtn(li, m.telefono);
       li.addEventListener('click', () => seleccionarExcel(m));
       mascotasUl.appendChild(li);
     });
@@ -214,12 +279,14 @@ async function seleccionarExcel(mascota) {
     }
 
     servicios.forEach((s) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${formatDateSafe(s.fecha)}</td>
-        <td>${esc(s.servicio || '-')}</td>
-      `;
-      serviciosBody.appendChild(tr);
+      appendServicioRow(serviciosBody, {
+        fecha: formatDateSafe(s.fecha),
+        servicio: s.servicio,
+        precio: s.precio,
+        adicionales: s.adicionales,
+        precioFinal: s.precio_final,
+        groomer: s.groomer,
+      });
     });
   } catch {
     msg.innerHTML = '<span style="color:#f87171">Error de red al cargar servicios.</span>';

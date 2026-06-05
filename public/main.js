@@ -104,7 +104,44 @@ async function buscarCliente() {
   }
 }
 
-btnBuscar.addEventListener('click', buscarCliente);
+/**
+ * Búsqueda inteligente: teléfono -> busca cliente directo; nombre de mascota ->
+ * muestra resultados para elegir y al seleccionar fija el teléfono y busca el cliente.
+ */
+async function buscarClienteSmart() {
+  const q = (buscarTelefonoInput.value || '').trim();
+  const resultados = document.getElementById('resultadosMascota');
+  resultados.hidden = true;
+  resultados.innerHTML = '';
+  lookupOptions.hidden = true;
+
+  if (!q) { lookupMsg.textContent = 'Ingrese un teléfono o nombre de mascota.'; return; }
+
+  if (BuscarMascota.esTelefono(q)) {
+    await buscarCliente();
+    return;
+  }
+
+  if (q.length < 2) { lookupMsg.textContent = 'Escribe al menos 2 letras del nombre.'; return; }
+  lookupMsg.textContent = 'Buscando mascotas…';
+  try {
+    const body = await BuscarMascota.buscarPorNombre(q);
+    lookupMsg.textContent = '';
+    BuscarMascota.render(resultados, body, (telefono) => {
+      buscarTelefonoInput.value = telefono;
+      resultados.hidden = true;
+      resultados.innerHTML = '';
+      buscarCliente();
+    });
+  } catch (e) {
+    lookupMsg.textContent = e.message || 'Error al buscar';
+  }
+}
+
+btnBuscar.addEventListener('click', buscarClienteSmart);
+buscarTelefonoInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); buscarClienteSmart(); }
+});
 
 btnPedido.addEventListener('click', () => {
   const c = window._clienteEncontrado || {};

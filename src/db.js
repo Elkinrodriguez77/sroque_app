@@ -568,7 +568,9 @@ async function getPedidosPorMascota(mascotaId) {
   const mascota = mascotaRows[0];
   if (!mascota) return [];
   const { rows } = await pool.query(
-    `SELECT id, fecha_hora, servicio, groomer1, nombre_mascota
+    `SELECT id, fecha_hora, servicio, groomer1, nombre_mascota,
+            precio, adicionales_descuentos,
+            (COALESCE(precio,0) + COALESCE(adicionales_descuentos,0)) AS precio_final
      FROM ${schema}.pedidos
      WHERE mascota_id = $1
         OR (telefono_propietario = $2 AND nombre_mascota = $3)

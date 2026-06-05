@@ -555,6 +555,42 @@ async function submitPedido(event) {
   }
 }
 
+/**
+ * Búsqueda inteligente: si el texto es un teléfono, busca pedidos directo;
+ * si es un nombre de mascota, muestra resultados para elegir y al seleccionar
+ * fija el teléfono y continúa con el flujo normal de pedidos.
+ */
+async function buscarPedidosSmart() {
+  const input = document.getElementById('filtroTelefono');
+  const q = input.value.trim();
+  const resultados = document.getElementById('resultadosMascota');
+  const msg = document.getElementById('pedidosMsg');
+  resultados.hidden = true;
+  resultados.innerHTML = '';
+
+  if (!q) { msg.innerHTML = '<span style="color:#f87171">Ingrese un teléfono o nombre de mascota</span>'; return; }
+
+  if (BuscarMascota.esTelefono(q)) {
+    await buscarPedidos();
+    return;
+  }
+
+  if (q.length < 2) { msg.innerHTML = '<span style="color:#9ca3af">Escribe al menos 2 letras del nombre.</span>'; return; }
+  msg.innerHTML = '<span style="color:#9ca3af">Buscando mascotas…</span>';
+  try {
+    const body = await BuscarMascota.buscarPorNombre(q);
+    msg.textContent = '';
+    BuscarMascota.render(resultados, body, (telefono) => {
+      input.value = telefono;
+      resultados.hidden = true;
+      resultados.innerHTML = '';
+      buscarPedidos();
+    });
+  } catch (e) {
+    msg.innerHTML = `<span style="color:#f87171">${e.message || 'Error al buscar'}</span>`;
+  }
+}
+
 async function buscarPedidos() {
   const tel = document.getElementById('filtroTelefono').value.trim();
   const ul = document.getElementById('listaPedidos');
@@ -941,7 +977,10 @@ function init() {
     syncTipoRequiredValidity();
   });
   document.getElementById('pedidoForm').addEventListener('submit', submitPedido);
-  document.getElementById('btnBuscarPedidos').addEventListener('click', buscarPedidos);
+  document.getElementById('btnBuscarPedidos').addEventListener('click', buscarPedidosSmart);
+  document.getElementById('filtroTelefono').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); buscarPedidosSmart(); }
+  });
   const pisoSel = document.getElementById('pisoSelect');
   if (pisoSel) {
     syncAllPedidoConstraints();

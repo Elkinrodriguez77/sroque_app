@@ -960,6 +960,48 @@ label.file-label input[type="file"] {
   color: #a5b4fc; font-weight: 600; background: rgba(99,102,241,0.15);
   padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(99,102,241,0.3);
 }
+.btn-copy-tel {
+  font-size: 0.78rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+  color: #c7d2fe; background: rgba(99,102,241,0.18);
+  border: 1px solid rgba(99,102,241,0.45); border-radius: 6px; padding: 5px 10px;
+  transition: all 0.15s;
+}
+.btn-copy-tel:hover { background: rgba(99,102,241,0.32); border-color: #6366f1; }
+.btn-copy-tel.copied { color: #34d399; background: rgba(52,211,153,0.15); border-color: rgba(52,211,153,0.5); }
+.btn-copy-tel:disabled { color: #6b7280; background: transparent; border-color: #374151; cursor: not-allowed; }
+
+/* ---- Búsqueda por nombre de mascota (Clientes / Pedidos) ---- */
+.bm-list {
+  list-style: none; padding: 0; margin: 10px 0 0;
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 340px; overflow-y: auto;
+}
+.bm-list .bm-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  border: 1px solid #374151; border-radius: 10px; padding: 10px 14px;
+  background: #1a2332; cursor: pointer; transition: all 0.15s;
+}
+.bm-list .bm-item:hover { border-color: #6366f1; background: rgba(99,102,241,0.08); }
+.bm-list .bm-info { display: flex; flex-direction: column; gap: 2px; }
+.bm-list .bm-nombre { font-weight: 600; color: #e5e7eb; }
+.bm-list .bm-prop { font-size: 0.82rem; color: #9ca3af; }
+.bm-list .bm-right { display: flex; align-items: center; gap: 8px; }
+.bm-list .bm-tel {
+  color: #a5b4fc; font-weight: 600; background: rgba(99,102,241,0.15);
+  padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(99,102,241,0.3);
+  font-size: 0.85rem;
+}
+.bm-list .bm-origen {
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+  padding: 3px 7px; border-radius: 5px; border: 1px solid transparent;
+}
+.bm-badge-sistema { color: #34d399; background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.4); }
+.bm-badge-historico { color: #fbbf24; background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.4); }
+.bm-badge-ambos { color: #c7d2fe; background: rgba(99,102,241,0.18); border-color: rgba(99,102,241,0.45); }
+.bm-list .bm-empty, .bm-list .bm-more {
+  list-style: none; color: #9ca3af; font-size: 0.85rem; padding: 8px 4px; text-align: center;
+}
+.bm-list .bm-more { color: #6b7280; font-style: italic; }
 
 /* ---- Cierre de caja ---- */
 .cierre-boutique-form {
