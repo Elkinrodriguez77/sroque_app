@@ -8,7 +8,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "smoke": "node scripts/smoke-test.js",
-    "test": "node scripts/smoke-test.js"
+    "test": "node scripts/smoke-test.js",
+    "purgar-abiertos": "node scripts/purgar-pedidos-abiertos.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

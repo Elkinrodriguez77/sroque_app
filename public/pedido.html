@@ -129,6 +129,16 @@
                 <option value="Piso 2">Piso 2</option>
               </select>
             </label>
+            <label>Origen del cliente <span class="hint" style="font-weight:400">(¿cómo nos conoció?)</span>
+              <div class="searchable-select" id="origenWrapper">
+                <input type="text" id="origenSearch" class="searchable-input" placeholder="Escribir para buscar origen..." autocomplete="off" />
+                <input type="hidden" name="origen_cliente" id="origenValue" value="" />
+                <div class="searchable-dropdown" id="origenDropdown"></div>
+              </div>
+            </label>
+            <label id="origenOtroWrapper" hidden>Especifica el origen
+              <input name="origen_cliente_otro" type="text" maxlength="80" placeholder="¿Cuál? Ej: feria, evento, alianza..." />
+            </label>
           </fieldset>
         </div>
 

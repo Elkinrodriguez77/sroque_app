@@ -10,7 +10,7 @@ require('./env');
 const {
   insertCliente, ping, findClienteByTelefono, updateCliente,
   getRazasTamano, findPedidosHoyPorTelefono, findPedidosHoyTodosPorTelefono, insertPedido, updatePedido, deletePedido,
-  getMascotasByTelefono, replaceMascotasForTelefono, upsertMascotaBasica, cerrarPedido,
+  getMascotasByTelefono, replaceMascotasForTelefono, upsertMascotaBasica, cerrarPedido, purgarPedidosAbiertos,
   getMascotaById, updateMascotaFotoReferencia,
   getPedidosPorFecha,
   searchMascotasByNombre, getPedidosPorMascota,
@@ -185,8 +185,25 @@ app.put('/api/clientes/:id', async (req, res) => {
   }
 });
 
+// Limpieza automática de pedidos abiertos sin cerrar de jornadas pasadas.
+// Se dispara de forma perezosa (throttled) al consultar pedidos, así los
+// abiertos no cerrados no se acumulan día a día sin necesitar un cron.
+// Para una purga exacta de fin de jornada (incluye HOY), usar el script
+// scripts/purgar-pedidos-abiertos.js en un job programado.
+let ultimaPurgaAbiertos = 0;
+const PURGA_ABIERTOS_INTERVALO_MS = 15 * 60 * 1000; // máx. una vez cada 15 min
+function purgarAbiertosThrottled() {
+  const ahora = Date.now();
+  if (ahora - ultimaPurgaAbiertos < PURGA_ABIERTOS_INTERVALO_MS) return;
+  ultimaPurgaAbiertos = ahora;
+  purgarPedidosAbiertos(false)
+    .then((n) => { if (n > 0) console.log(`Purga automática: ${n} pedido(s) abierto(s) sin cerrar eliminados.`); })
+    .catch((e) => console.error('Purga automática de abiertos falló:', e.message));
+}
+
 app.get('/api/pedidos', async (req, res) => {
   try {
+    purgarAbiertosThrottled();
     const tel = String(req.query.telefono || '').trim();
     if (!tel) return res.status(400).json({ ok: false, errors: ['telefono es requerido'] });
     const todos = String(req.query.todos || '') === '1' || String(req.query.todos || '').toLowerCase() === 'true';

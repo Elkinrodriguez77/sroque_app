@@ -132,9 +132,10 @@ async function insertPedido(pedido) {
       groomer1,
       groomer2,
       mascota_id,
-      nombre_mascota
+      nombre_mascota,
+      origen_cliente
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20
     ) RETURNING id;
   `;
   const values = [
@@ -157,6 +158,7 @@ async function insertPedido(pedido) {
     pedido.groomer2 || null,
     pedido.mascota_id || null,
     pedido.nombre_mascota || null,
+    pedido.origen_cliente || null,
   ];
   const { rows } = await pool.query(text, values);
   return rows[0];
@@ -184,8 +186,9 @@ async function updatePedido(id, pedido) {
       groomer1 = $16,
       groomer2 = $17,
       mascota_id = $18,
-      nombre_mascota = $19
-    WHERE id = $20
+      nombre_mascota = $19,
+      origen_cliente = $20
+    WHERE id = $21
     RETURNING id;
   `;
   const values = [
@@ -208,6 +211,7 @@ async function updatePedido(id, pedido) {
     pedido.groomer2 || null,
     pedido.mascota_id || null,
     pedido.nombre_mascota || null,
+    pedido.origen_cliente || null,
     id,
   ];
   const { rows } = await pool.query(text, values);
@@ -247,6 +251,25 @@ async function deletePedido(id) {
     [id]
   );
   return rows[0] || null;
+}
+
+/**
+ * Elimina pedidos que quedaron ABIERTOS (sin cerrar) y ya no pertenecen a la
+ * jornada en curso. Los abiertos no cerrados no deben acumularse día a día.
+ * @param {boolean} incluirHoy Si true, también borra los abiertos de HOY
+ *   (usar solo en un job de fin de jornada). Por defecto solo borra jornadas
+ *   pasadas, para no eliminar pedidos que aún se están atendiendo hoy.
+ * @returns {Promise<number>} cantidad de pedidos eliminados.
+ */
+async function purgarPedidosAbiertos(incluirHoy = false) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const cmp = incluirHoy ? '<=' : '<';
+  const { rowCount } = await pool.query(
+    `DELETE FROM ${schema}.pedidos
+     WHERE COALESCE(cerrado, false) = false
+       AND (fecha_hora AT TIME ZONE 'America/Bogota')::date ${cmp} (NOW() AT TIME ZONE 'America/Bogota')::date`
+  );
+  return rowCount;
 }
 
 async function cerrarPedido(id) {
@@ -784,7 +807,7 @@ module.exports = {
   insertCliente, findClienteByTelefono, updateCliente,
   insertPedido, updatePedido, findPedidosHoyPorTelefono, findPedidosHoyTodosPorTelefono, deletePedido,
   getRazasTamano, getMascotasByTelefono, replaceMascotasForTelefono,
-  upsertMascotaBasica, cerrarPedido, getMascotaById, updateMascotaFotoReferencia,
+  upsertMascotaBasica, cerrarPedido, purgarPedidosAbiertos, getMascotaById, updateMascotaFotoReferencia,
   getPedidosPorFecha,
   searchMascotasByNombre, getPedidosPorMascota,
   insertGasto, getGastosPorFecha, updateGasto, deleteGasto,

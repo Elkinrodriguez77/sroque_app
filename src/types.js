@@ -98,6 +98,7 @@ function sanitizePedidoInput(input) {
     monto_pago_2: isMixto ? toNumberOrZero(input.monto_pago_2) : null,
     groomer1: input.groomer1 ? String(input.groomer1).trim() : undefined,
     groomer2: input.groomer2 ? String(input.groomer2).trim() : undefined,
+    origen_cliente: input.origen_cliente ? String(input.origen_cliente).trim().slice(0, 80) : undefined,
   };
 }
 

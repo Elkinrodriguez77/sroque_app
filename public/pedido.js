@@ -20,6 +20,20 @@ let fotoPreviewObjectUrl = null;
 
 let GROOMERS_LIST = [];
 
+/** Orígenes de cliente sugeridos para un SPA de mascotas. Editar aquí para ajustar la lista. */
+const ORIGENES_CLIENTE = [
+  'WhatsApp',
+  'Instagram',
+  'Facebook',
+  'TikTok',
+  'Google / Búsqueda web',
+  'Referido / Recomendación',
+  'Cliente frecuente',
+  'Paso por el local (fachada)',
+  'Publicidad / Volante',
+  'Otros',
+];
+
 /**
  * Precios sugeridos (COP). Editar aquí para actualizar tarifas.
  * - manto_corto: pelaje "Corto"
@@ -227,6 +241,124 @@ function initGroomerPickers() {
 
   attach('1');
   attach('2');
+}
+
+/** Muestra/oculta el campo "Especifica el origen" según la selección. */
+function onOrigenChange() {
+  const val = (document.getElementById('origenValue')?.value || '').trim();
+  const wrapper = document.getElementById('origenOtroWrapper');
+  if (wrapper) wrapper.hidden = val !== 'Otros';
+}
+
+/**
+ * Carga el valor guardado del origen. Si no está en la lista fija se trata como
+ * "Otros" y el texto libre se coloca en el campo "Especifica el origen".
+ */
+function setOrigenValue(val) {
+  const search = document.getElementById('origenSearch');
+  const hidden = document.getElementById('origenValue');
+  const otroInput = document.querySelector('#pedidoForm [name="origen_cliente_otro"]');
+  const v = (val || '').trim();
+  if (!v) {
+    if (hidden) hidden.value = '';
+    if (search) search.value = '';
+    if (otroInput) otroInput.value = '';
+    onOrigenChange();
+    return;
+  }
+  if (ORIGENES_CLIENTE.includes(v) && v !== 'Otros') {
+    if (hidden) hidden.value = v;
+    if (search) search.value = v;
+    if (otroInput) otroInput.value = '';
+  } else {
+    // Valor personalizado guardado antes → "Otros" + texto libre
+    if (hidden) hidden.value = 'Otros';
+    if (search) search.value = 'Otros';
+    if (otroInput) otroInput.value = v;
+  }
+  onOrigenChange();
+}
+
+/** Lista filtrable tipo «Raza» para el origen del cliente (con opción "Otros"). */
+function initOrigenPicker() {
+  const wrapper = document.getElementById('origenWrapper');
+  const search = document.getElementById('origenSearch');
+  const hidden = document.getElementById('origenValue');
+  const dropdown = document.getElementById('origenDropdown');
+  if (!wrapper || !search || !hidden || !dropdown) return;
+
+  function render(filter) {
+    dropdown.innerHTML = '';
+    const q = (filter || '').trim().toLowerCase();
+    const filtered = q ? ORIGENES_CLIENTE.filter((n) => n.toLowerCase().includes(q)) : ORIGENES_CLIENTE;
+    if (filtered.length === 0) {
+      dropdown.innerHTML = '<div class="ss-empty">Sin resultados</div>';
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    for (const name of filtered) {
+      const div = document.createElement('div');
+      div.className = 'ss-option';
+      div.textContent = name;
+      div.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        pick(name);
+      });
+      frag.appendChild(div);
+    }
+    dropdown.appendChild(frag);
+  }
+
+  function pick(name) {
+    hidden.value = name;
+    search.value = name;
+    wrapper.classList.remove('open');
+    onOrigenChange();
+    if (name === 'Otros') {
+      const otroInput = document.querySelector('#pedidoForm [name="origen_cliente_otro"]');
+      if (otroInput) queueMicrotask(() => otroInput.focus());
+    }
+  }
+
+  function syncBlur() {
+    wrapper.classList.remove('open');
+    const q = search.value.trim();
+    if (!q) {
+      hidden.value = '';
+      search.value = '';
+      onOrigenChange();
+      return;
+    }
+    const exact = ORIGENES_CLIENTE.find((n) => n.toLowerCase() === q.toLowerCase());
+    if (exact) {
+      hidden.value = exact;
+      search.value = exact;
+    } else {
+      search.value = hidden.value || '';
+    }
+    onOrigenChange();
+  }
+
+  search.addEventListener('focus', () => {
+    wrapper.classList.add('open');
+    render(search.value);
+  });
+  search.addEventListener('input', () => {
+    wrapper.classList.add('open');
+    render(search.value);
+  });
+  search.addEventListener('blur', syncBlur);
+  search.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      wrapper.classList.remove('open');
+      search.blur();
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const first = dropdown.querySelector('.ss-option');
+      if (first && !first.classList.contains('ss-empty')) pick(first.textContent);
+    }
+  });
 }
 
 // ---- Raza / precios ----
@@ -471,6 +603,17 @@ async function submitPedido(event) {
   }
   delete data.servicio_otro;
 
+  // Origen del cliente: si eligió "Otros", guardar el texto libre escrito.
+  if (data.origen_cliente === 'Otros') {
+    const otro = (data.origen_cliente_otro || '').trim();
+    if (!otro) {
+      errorsEl.textContent = 'Seleccionaste "Otros" en Origen del cliente: escribe cuál.';
+      return;
+    }
+    data.origen_cliente = otro;
+  }
+  delete data.origen_cliente_otro;
+
   // Resolve adicionales (percentage → absolute)
   data.adicionales_descuentos = parseAdicionales();
 
@@ -519,6 +662,7 @@ async function submitPedido(event) {
 
     form.reset();
     setRazaValue('');
+    setOrigenValue('');
     document.getElementById('precioSugerido').hidden = true;
     document.getElementById('mixtoWrapper').hidden = true;
     document.getElementById('adicInfoPopup').hidden = true;
@@ -735,6 +879,7 @@ async function cargarPedidoEnFormulario(p) {
   form.elements['adicionales_descuentos'].value = (p.adicionales_descuentos != null) ? p.adicionales_descuentos : 0;
   setGroomerPickerValue('1', p.groomer1 || '');
   setGroomerPickerValue('2', p.groomer2 || '');
+  setOrigenValue(p.origen_cliente || '');
   updateMoney();
   document.getElementById('precioSugerido').hidden = true;
   suggestPrice();
@@ -841,6 +986,7 @@ async function eliminarPedido(p) {
       form.reset();
       form.elements['id'].value = '';
       setRazaValue('');
+      setOrigenValue('');
       syncAllPedidoConstraints();
       updateMoney();
       document.getElementById('precioSugerido').hidden = true;
@@ -870,6 +1016,7 @@ async function cerrarPedido(id) {
     const form = document.getElementById('pedidoForm');
     form.reset();
     setRazaValue('');
+    setOrigenValue('');
     syncAllPedidoConstraints();
     updateMoney();
     document.getElementById('precioSugerido').hidden = true;
@@ -968,6 +1115,7 @@ function init() {
   loadGroomers();
   initRazaDropdown();
   initGroomerPickers();
+  initOrigenPicker();
 
   document.getElementById('servicioSelect').addEventListener('change', onServicioChange);
   document.getElementById('tamanoSelect').addEventListener('change', suggestPrice);
