@@ -17,6 +17,7 @@ const form = document.getElementById('groomerForm');
 const errorsEl = document.getElementById('groomerErrors');
 const listEl = document.getElementById('groomerList');
 const filtroEstadoEl = document.getElementById('filtroGroomerEstado');
+const buscarEl = document.getElementById('buscarGroomer');
 const btnCancel = document.getElementById('btnCancel');
 const btnSubmit = document.getElementById('btnSubmit');
 const formLegend = document.getElementById('formLegend');
@@ -25,9 +26,14 @@ let groomersCache = [];
 
 function filtrarGroomers(data) {
   const v = filtroEstadoEl?.value || 'todos';
-  if (v === 'activos') return data.filter((g) => g.activo);
-  if (v === 'inactivos') return data.filter((g) => !g.activo);
-  return data;
+  const q = (buscarEl?.value || '').trim().toLowerCase();
+  let out = data;
+  if (v === 'activos') out = out.filter((g) => g.activo);
+  else if (v === 'inactivos') out = out.filter((g) => !g.activo);
+  if (q) {
+    out = out.filter((g) => `${g.nombre} ${g.apellido}`.toLowerCase().includes(q));
+  }
+  return out;
 }
 
 function renderGroomerList() {
@@ -41,10 +47,15 @@ function renderGroomerList() {
 
   if (data.length === 0) {
     const v = filtroEstadoEl?.value || 'todos';
+    const q = (buscarEl?.value || '').trim();
     let msg = 'No hay resultados para este filtro.';
-    if (v === 'activos') msg = 'No hay groomers activos.';
-    if (v === 'inactivos') msg = 'No hay groomers inactivos.';
-    listEl.innerHTML = `<p style="color:#9ca3af">${msg}</p>`;
+    if (q) msg = `Sin coincidencias para "${q}".`;
+    else if (v === 'activos') msg = 'No hay groomers activos.';
+    else if (v === 'inactivos') msg = 'No hay groomers inactivos.';
+    const p = document.createElement('p');
+    p.style.color = '#9ca3af';
+    p.textContent = msg;
+    listEl.appendChild(p);
     return;
   }
 
@@ -161,5 +172,6 @@ async function toggleActivo(id, activo) {
 }
 
 filtroEstadoEl?.addEventListener('change', () => renderGroomerList());
+buscarEl?.addEventListener('input', () => renderGroomerList());
 
 document.addEventListener('DOMContentLoaded', loadGroomers);

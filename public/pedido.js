@@ -20,8 +20,13 @@ let fotoPreviewObjectUrl = null;
 
 let GROOMERS_LIST = [];
 
-/** Orígenes de cliente sugeridos para un SPA de mascotas. Editar aquí para ajustar la lista. */
-const ORIGENES_CLIENTE = [
+/**
+ * Orígenes de cliente. La lista real se administra en «Orígenes» (/origenes.html)
+ * y llega por /api/origenes/activos; esta constante solo es el respaldo si la
+ * consulta falla. «Otros» siempre se agrega al final (habilita el texto libre).
+ */
+const ORIGEN_OTROS = 'Otros';
+const ORIGENES_CLIENTE_FALLBACK = [
   'WhatsApp',
   'Instagram',
   'Facebook',
@@ -31,8 +36,8 @@ const ORIGENES_CLIENTE = [
   'Cliente frecuente',
   'Paso por el local (fachada)',
   'Publicidad / Volante',
-  'Otros',
 ];
+let ORIGENES_CLIENTE = [...ORIGENES_CLIENTE_FALLBACK, ORIGEN_OTROS];
 
 /**
  * Precios sugeridos (COP). Editar aquí para actualizar tarifas.
@@ -247,7 +252,8 @@ function initGroomerPickers() {
 function onOrigenChange() {
   const val = (document.getElementById('origenValue')?.value || '').trim();
   const wrapper = document.getElementById('origenOtroWrapper');
-  if (wrapper) wrapper.hidden = val !== 'Otros';
+  if (wrapper) wrapper.hidden = val !== ORIGEN_OTROS;
+  syncOrigenRequiredValidity();
 }
 
 /**
@@ -266,14 +272,14 @@ function setOrigenValue(val) {
     onOrigenChange();
     return;
   }
-  if (ORIGENES_CLIENTE.includes(v) && v !== 'Otros') {
+  if (ORIGENES_CLIENTE.includes(v) && v !== ORIGEN_OTROS) {
     if (hidden) hidden.value = v;
     if (search) search.value = v;
     if (otroInput) otroInput.value = '';
   } else {
-    // Valor personalizado guardado antes → "Otros" + texto libre
-    if (hidden) hidden.value = 'Otros';
-    if (search) search.value = 'Otros';
+    // Valor personalizado (o un origen que ya no está en el catálogo) → "Otros" + texto libre
+    if (hidden) hidden.value = ORIGEN_OTROS;
+    if (search) search.value = ORIGEN_OTROS;
     if (otroInput) otroInput.value = v;
   }
   onOrigenChange();
@@ -314,7 +320,7 @@ function initOrigenPicker() {
     search.value = name;
     wrapper.classList.remove('open');
     onOrigenChange();
-    if (name === 'Otros') {
+    if (name === ORIGEN_OTROS) {
       const otroInput = document.querySelector('#pedidoForm [name="origen_cliente_otro"]');
       if (otroInput) queueMicrotask(() => otroInput.focus());
     }
@@ -603,11 +609,17 @@ async function submitPedido(event) {
   }
   delete data.servicio_otro;
 
-  // Origen del cliente: si eligió "Otros", guardar el texto libre escrito.
-  if (data.origen_cliente === 'Otros') {
+  // Origen del cliente: obligatorio. Si eligió "Otros", guardar el texto libre escrito.
+  if (!(data.origen_cliente || '').trim()) {
+    errorsEl.textContent = 'Selecciona el origen del cliente (¿cómo nos conoció?).';
+    document.getElementById('origenSearch')?.focus();
+    return;
+  }
+  if (data.origen_cliente === ORIGEN_OTROS) {
     const otro = (data.origen_cliente_otro || '').trim();
     if (!otro) {
       errorsEl.textContent = 'Seleccionaste "Otros" en Origen del cliente: escribe cuál.';
+      document.querySelector('#pedidoForm [name="origen_cliente_otro"]')?.focus();
       return;
     }
     data.origen_cliente = otro;
@@ -1053,6 +1065,19 @@ async function loadGroomers() {
   } catch { /* silent */ }
 }
 
+/** Trae el catálogo editable de orígenes; si falla, deja el respaldo del código. */
+async function loadOrigenesCliente() {
+  try {
+    const resp = await fetch('/api/origenes/activos');
+    const { ok, data } = await resp.json();
+    if (!ok || !Array.isArray(data) || data.length === 0) return;
+    const nombres = data
+      .map((o) => String(o.nombre || '').trim())
+      .filter((n) => n && n.toLowerCase() !== ORIGEN_OTROS.toLowerCase());
+    ORIGENES_CLIENTE = [...nombres, ORIGEN_OTROS];
+  } catch { /* se queda el respaldo */ }
+}
+
 function validateGroomers() {
   const g1 = (document.getElementById('groomer1Value')?.value || '').trim();
   const g2 = (document.getElementById('groomer2Value')?.value || '').trim();
@@ -1094,12 +1119,33 @@ function syncRazaRequiredValidity() {
   h.setCustomValidity((h.value || '').trim() ? '' : 'Indica la raza.');
 }
 
+/**
+ * Origen del cliente es obligatorio. El valor real vive en un input hidden
+ * (barrado de la validación nativa), así que el mensaje se apoya en el input
+ * de búsqueda visible y el bloqueo definitivo se hace en submitPedido().
+ */
+function syncOrigenRequiredValidity() {
+  const hidden = document.getElementById('origenValue');
+  const search = document.getElementById('origenSearch');
+  if (!hidden || !search) return;
+  const val = (hidden.value || '').trim();
+  const otroInput = document.querySelector('#pedidoForm [name="origen_cliente_otro"]');
+  if (!val) {
+    search.setCustomValidity('Selecciona el origen del cliente.');
+  } else if (val === ORIGEN_OTROS && !(otroInput?.value || '').trim()) {
+    search.setCustomValidity('Elegiste "Otros": escribe cuál en el campo de abajo.');
+  } else {
+    search.setCustomValidity('');
+  }
+}
+
 function syncAllPedidoConstraints() {
   syncTelefonoPropietarioValidity();
   syncPisoRequiredValidity();
   syncTipoRequiredValidity();
   syncServicioRequiredValidity();
   syncRazaRequiredValidity();
+  syncOrigenRequiredValidity();
 }
 
 function init() {
@@ -1113,9 +1159,13 @@ function init() {
     .catch(() => {});
 
   loadGroomers();
+  loadOrigenesCliente();
   initRazaDropdown();
   initGroomerPickers();
   initOrigenPicker();
+
+  document.querySelector('#pedidoForm [name="origen_cliente_otro"]')
+    ?.addEventListener('input', syncOrigenRequiredValidity);
 
   document.getElementById('servicioSelect').addEventListener('change', onServicioChange);
   document.getElementById('tamanoSelect').addEventListener('change', suggestPrice);

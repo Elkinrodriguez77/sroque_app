@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Equipo Groomer - San Roque</title>
+  <title>Orígenes de cliente - San Roque</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -91,34 +91,33 @@
 <div class="app-shell">
 <a href="/" class="app-floating-logo" aria-label="San Roque, inicio"><img src="/img/logo_san_roque.png" alt="San Roque" decoding="async" /></a>
   <main class="container">
-    <h1>Equipo Groomer</h1>
+    <h1>Orígenes de cliente</h1>
+    <p class="hint" style="margin-top:-6px">
+      Opciones que aparecen en el campo <strong>«Origen del cliente»</strong> del pedido (¿cómo nos conoció?).
+      Solo se ofrecen los orígenes <strong>activos</strong>; la opción <strong>«Otros»</strong> siempre está
+      disponible para escribir un texto libre.
+    </p>
 
     <fieldset>
-      <legend id="formLegend">Registrar nuevo groomer</legend>
-      <form id="groomerForm">
+      <legend id="formLegend">Registrar nuevo origen</legend>
+      <form id="origenForm">
         <input type="hidden" name="id" />
-        <label>Documento de identidad
-          <input name="documento" type="text" maxlength="30" required placeholder="Ej: 1234567890" />
+        <label>Nombre del origen
+          <input name="nombre" type="text" maxlength="80" required placeholder="Ej: Feria de mascotas" />
         </label>
-        <label>Nombre
-          <input name="nombre" type="text" maxlength="100" required placeholder="Nombre" />
-        </label>
-        <label>Apellido
-          <input name="apellido" type="text" maxlength="100" required placeholder="Apellido" />
-        </label>
-        <div id="groomerErrors" class="errors" aria-live="polite"></div>
+        <div id="origenErrors" class="errors" aria-live="polite"></div>
         <div style="display:flex; gap:8px;">
-          <button type="submit" id="btnSubmit">Guardar groomer</button>
+          <button type="submit" id="btnSubmit">Guardar origen</button>
           <button type="button" id="btnCancel" hidden>Cancelar</button>
         </div>
       </form>
     </fieldset>
 
     <fieldset class="groomers-list-fieldset">
-      <legend>Groomers registrados</legend>
+      <legend>Orígenes registrados</legend>
       <div class="groomers-toolbar">
         <label class="groomers-filter-label">Mostrar
-          <select id="filtroGroomerEstado" class="groomers-filter-select">
+          <select id="filtroOrigenEstado" class="groomers-filter-select">
             <option value="todos" selected>Todos</option>
             <option value="activos">Activos</option>
             <option value="inactivos">Inactivos</option>
@@ -127,15 +126,15 @@
         <label class="groomers-filter-label groomers-search-label">Buscar
           <input
             type="search"
-            id="buscarGroomer"
+            id="buscarOrigen"
             class="groomers-search-input"
-            placeholder="Escribe el nombre del groomer..."
+            placeholder="Escribe el nombre del origen..."
             autocomplete="off"
           />
         </label>
       </div>
-      <div id="groomerListScroll" class="groomer-list-scroll">
-        <div id="groomerList" class="groomer-list-inner"></div>
+      <div id="origenListScroll" class="groomer-list-scroll">
+        <div id="origenList" class="groomer-list-inner"></div>
       </div>
     </fieldset>
   </main>
@@ -143,6 +142,6 @@
   <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
 </div>
   <script src="/sidebar.js" defer></script>
-  <script src="/groomers.js" defer></script>
+  <script src="/origenes.js" defer></script>
 </body>
 </html>

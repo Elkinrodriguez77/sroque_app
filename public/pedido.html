@@ -38,6 +38,12 @@
           </a>
         </li>
         <li>
+          <a href="/origenes.html" class="sidebar-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51 15.42 17.49M15.41 6.51 8.59 10.49"/></svg>
+            <span class="sidebar-label">Orígenes</span>
+          </a>
+        </li>
+        <li>
           <a href="/gastos.html" class="sidebar-link">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
             <span class="sidebar-label">Gastos</span>
@@ -129,14 +135,14 @@
                 <option value="Piso 2">Piso 2</option>
               </select>
             </label>
-            <label>Origen del cliente <span class="hint" style="font-weight:400">(¿cómo nos conoció?)</span>
+            <label>Origen del cliente * <span class="hint" style="font-weight:400">(¿cómo nos conoció?)</span>
               <div class="searchable-select" id="origenWrapper">
-                <input type="text" id="origenSearch" class="searchable-input" placeholder="Escribir para buscar origen..." autocomplete="off" />
+                <input type="text" id="origenSearch" class="searchable-input" placeholder="Escribir para buscar origen..." autocomplete="off" aria-required="true" />
                 <input type="hidden" name="origen_cliente" id="origenValue" value="" />
                 <div class="searchable-dropdown" id="origenDropdown"></div>
               </div>
             </label>
-            <label id="origenOtroWrapper" hidden>Especifica el origen
+            <label id="origenOtroWrapper" hidden>Especifica el origen *
               <input name="origen_cliente_otro" type="text" maxlength="80" placeholder="¿Cuál? Ej: feria, evento, alianza..." />
             </label>
           </fieldset>

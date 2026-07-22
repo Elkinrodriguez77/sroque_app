@@ -18,6 +18,7 @@ const {
   getInicioCajaPorMetodo,
   insertBoutique, getBoutiquePorFecha, deleteBoutique,
   getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
+  getAllOrigenes, getActiveOrigenes, insertOrigen, updateOrigen, toggleOrigenActivo, deleteOrigen,
 } = require('./db');
 const { sanitizeClienteInput, validateCliente, sanitizePedidoInput, validatePedido, sanitizeGastoInput, validateGasto } = require('./types');
 const { findUserByUsername, verifyPassword, requireAuth, loginRateLimiter, recordFailedAttempt, clearAttempts } = require('./auth');
@@ -757,6 +758,96 @@ app.patch('/api/groomers/:id/toggle', async (req, res) => {
     res.json({ ok: true, data: updated });
   } catch (e) {
     console.error('Toggle groomer error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+// -------- Orígenes de cliente --------
+/** Nombre de origen válido: no vacío y máximo 80 caracteres (igual que la columna). */
+function sanitizeOrigenNombre(nombre) {
+  const v = String(nombre == null ? '' : nombre).trim().replace(/\s+/g, ' ');
+  if (!v) return { error: 'El nombre del origen es requerido' };
+  if (v.length > 80) return { error: 'El nombre del origen no puede superar 80 caracteres' };
+  if (v.toLowerCase() === 'otros') {
+    return { error: '"Otros" ya está disponible siempre en el pedido; no hace falta crearlo' };
+  }
+  return { value: v };
+}
+
+app.get('/api/origenes', async (req, res) => {
+  try {
+    const rows = await getAllOrigenes();
+    res.json({ ok: true, data: rows });
+  } catch (e) {
+    console.error('Get origenes error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.get('/api/origenes/activos', async (req, res) => {
+  try {
+    const rows = await getActiveOrigenes();
+    res.json({ ok: true, data: rows });
+  } catch (e) {
+    console.error('Get active origenes error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.post('/api/origenes', async (req, res) => {
+  try {
+    const { value, error } = sanitizeOrigenNombre(req.body.nombre);
+    if (error) return res.status(400).json({ ok: false, errors: [error] });
+    const created = await insertOrigen({ nombre: value });
+    res.status(201).json({ ok: true, data: created });
+  } catch (e) {
+    if (e.code === '23505') return res.status(409).json({ ok: false, errors: ['Ya existe un origen con ese nombre'] });
+    console.error('Insert origen error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.put('/api/origenes/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
+    const { value, error } = sanitizeOrigenNombre(req.body.nombre);
+    if (error) return res.status(400).json({ ok: false, errors: [error] });
+    const updated = await updateOrigen(id, { nombre: value });
+    if (!updated) return res.status(404).json({ ok: false, errors: ['Origen no encontrado'] });
+    res.json({ ok: true, data: updated });
+  } catch (e) {
+    if (e.code === '23505') return res.status(409).json({ ok: false, errors: ['Ya existe un origen con ese nombre'] });
+    console.error('Update origen error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.patch('/api/origenes/:id/toggle', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
+    const { activo } = req.body;
+    if (typeof activo !== 'boolean') return res.status(400).json({ ok: false, errors: ['activo debe ser true o false'] });
+    const updated = await toggleOrigenActivo(id, activo);
+    if (!updated) return res.status(404).json({ ok: false, errors: ['Origen no encontrado'] });
+    res.json({ ok: true, data: updated });
+  } catch (e) {
+    console.error('Toggle origen error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+// Los pedidos guardan el origen como texto, así que borrar no rompe el histórico.
+app.delete('/api/origenes/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
+    const deleted = await deleteOrigen(id);
+    if (!deleted) return res.status(404).json({ ok: false, errors: ['Origen no encontrado'] });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Delete origen error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno'] });
   }
 });

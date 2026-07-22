@@ -3,6 +3,57 @@ const BI_URL_SUPERADMIN =
   'https://app.powerbi.com/view?r=eyJrIjoiMzYzYjE1NmYtZWJmZC00MmIwLTg3NTctYjdkYjBlNzkxZmRlIiwidCI6IjM2M2I4NjhjLWJjNGEtNGFlMS05NDA1LWNiNWRjMzlmMDk2NyIsImMiOjR9';
 const BI_URL_DEFAULT =
   'https://app.powerbi.com/view?r=eyJrIjoiNGVkNjk3MTAtNzdiZS00OWNiLWIzMzUtOTUxNWI1Njc5NTA4IiwidCI6IjM2M2I4NjhjLWJjNGEtNGFlMS05NDA1LWNiNWRjMzlmMDk2NyIsImMiOjR9';
+// Dash "Follow Up": solo visible para kathe_superadmin.
+const BI_URL_FOLLOWUP =
+  'https://app.powerbi.com/view?r=eyJrIjoiMzE5OGY0ZjEtNDVhNC00YjhiLWE2NTItOTRhZTM0ZjQ0MWIwIiwidCI6IjVkNTZhZDFiLTc4NDctNDQ1Yy1hNTBjLTIzMWQ5ZjhlY2NiMiJ9';
+
+let BI_IS_SUPER = false;
+
+const biChooser = document.getElementById('biChooser');
+const biShell = document.getElementById('biEmbedShell');
+const biFrame = document.getElementById('biEmbedFrame');
+const biEmbedName = document.getElementById('biEmbedName');
+const btnFs = document.getElementById('btnBiFullscreen');
+const btnBack = document.getElementById('btnBiBack');
+const cardFollowup = document.getElementById('biCardFollowup');
+
+/** Config de cada dash según la tarjeta elegida (y el usuario). */
+function dashConfig(key) {
+  if (key === 'followup') {
+    return { title: 'Dash KPIs - Follow Up', label: 'Follow Up', src: BI_URL_FOLLOWUP, followup: true };
+  }
+  return {
+    title: BI_IS_SUPER ? 'SanRoqueGerencia_BI' : 'SanRoqueAdmon_BI',
+    label: 'Ventas',
+    src: BI_IS_SUPER ? BI_URL_SUPERADMIN : BI_URL_DEFAULT,
+    followup: false,
+  };
+}
+
+function openDash(key) {
+  const cfg = dashConfig(key);
+  if (!cfg.src) return;
+  if (biFrame) {
+    biFrame.title = cfg.title;
+    biFrame.src = cfg.src;
+  }
+  if (biEmbedName) biEmbedName.textContent = cfg.label;
+  if (biShell) biShell.classList.toggle('is-followup', cfg.followup);
+  if (biChooser) biChooser.hidden = true;
+  if (biShell) biShell.hidden = false;
+  biSyncFullscreenButton();
+}
+
+function backToChooser() {
+  if (biIsFullscreen()) {
+    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    else if (document.msExitFullscreen) document.msExitFullscreen();
+  }
+  if (biShell) biShell.hidden = true;
+  if (biFrame) biFrame.src = 'about:blank'; // libera el informe para no seguir cargándolo
+  if (biChooser) biChooser.hidden = false;
+}
 
 (async function loadSession() {
   try {
@@ -12,21 +63,20 @@ const BI_URL_DEFAULT =
     const badge = document.getElementById('userBadge');
     if (badge) badge.textContent = nombre || username || '';
 
-    const iframe = document.getElementById('biEmbedFrame');
-    if (iframe) {
-      const isSuper = username === BI_SUPERADMIN_USER;
-      iframe.title = isSuper ? 'SanRoqueGerencia_BI' : 'SanRoqueAdmon_BI';
-      iframe.src = isSuper ? BI_URL_SUPERADMIN : BI_URL_DEFAULT;
-    }
+    BI_IS_SUPER = username === BI_SUPERADMIN_USER;
+    if (cardFollowup) cardFollowup.hidden = !BI_IS_SUPER;
   } catch { window.location.href = '/login.html'; }
 })();
+
 document.getElementById('btnLogout')?.addEventListener('click', async () => {
   await fetch('/api/logout', { method: 'POST' });
   window.location.href = '/login.html';
 });
 
-const biShell = document.getElementById('biEmbedShell');
-const btnFs = document.getElementById('btnBiFullscreen');
+document.querySelectorAll('.bi-card[data-dash]').forEach((card) => {
+  card.addEventListener('click', () => openDash(card.getAttribute('data-dash')));
+});
+btnBack?.addEventListener('click', backToChooser);
 
 function biFullscreenElement() {
   return (

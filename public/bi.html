@@ -22,6 +22,7 @@
         <li><a href="/" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="sidebar-label">Clientes</span></a></li>
         <li><a href="/pedido.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg><span class="sidebar-label">Pedidos</span></a></li>
         <li><a href="/groomers.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="sidebar-label">Equipo</span></a></li>
+        <li><a href="/origenes.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51 15.42 17.49M15.41 6.51 8.59 10.49"/></svg><span class="sidebar-label">Orígenes</span></a></li>
         <li><a href="/gastos.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg><span class="sidebar-label">Gastos</span></a></li>
         <li><a href="/servicios.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span class="sidebar-label">Consulta servicios</span></a></li>
         <li><a href="/dashboard.html" class="sidebar-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg><span class="sidebar-label">Dashboard</span></a></li>
@@ -75,8 +76,40 @@
       </div>
     </header>
 
-    <div class="bi-embed-shell" id="biEmbedShell">
+    <section class="bi-chooser" id="biChooser" aria-label="Elige un informe">
+      <h2 class="bi-chooser-title">Elige un informe</h2>
+      <div class="bi-cards" id="biCards">
+        <button type="button" class="bi-card" data-dash="ventas">
+          <span class="bi-card-icon" aria-hidden="true">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+          </span>
+          <span class="bi-card-body">
+            <span class="bi-card-name">Ventas</span>
+            <span class="bi-card-desc">Indicadores de ventas y desempeño del negocio.</span>
+          </span>
+          <span class="bi-card-cta" aria-hidden="true">Entrar →</span>
+        </button>
+
+        <button type="button" class="bi-card bi-card-followup" data-dash="followup" id="biCardFollowup" hidden>
+          <span class="bi-card-icon" aria-hidden="true">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+          </span>
+          <span class="bi-card-body">
+            <span class="bi-card-name">Follow Up</span>
+            <span class="bi-card-desc">Seguimiento de KPIs y gestión de follow up.</span>
+          </span>
+          <span class="bi-card-cta" aria-hidden="true">Entrar →</span>
+        </button>
+      </div>
+    </section>
+
+    <div class="bi-embed-shell" id="biEmbedShell" hidden>
       <div class="bi-fs-bar">
+        <button type="button" class="bi-back-btn" id="btnBiBack">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          <span>Informes</span>
+        </button>
+        <span class="bi-embed-name" id="biEmbedName" aria-live="polite"></span>
         <button type="button" class="bi-fs-btn bi-fs-btn-pro" id="btnBiFullscreen" aria-pressed="false">
           <span class="bi-fs-btn-inner" aria-hidden="true">
             <svg class="bi-fs-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>

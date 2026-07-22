@@ -565,6 +565,58 @@ async function toggleGroomerActivo(id, activo) {
   return rows[0] || null;
 }
 
+// ----- Orígenes de cliente (catálogo del campo "Origen del cliente") -----
+async function getAllOrigenes() {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `SELECT id, nombre, activo, created_at FROM ${schema}.origenes_cliente ORDER BY nombre`
+  );
+  return rows;
+}
+
+async function getActiveOrigenes() {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `SELECT id, nombre FROM ${schema}.origenes_cliente WHERE activo = true ORDER BY nombre`
+  );
+  return rows;
+}
+
+async function insertOrigen({ nombre }) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `INSERT INTO ${schema}.origenes_cliente (nombre) VALUES ($1) RETURNING *`,
+    [nombre]
+  );
+  return rows[0];
+}
+
+async function updateOrigen(id, { nombre }) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `UPDATE ${schema}.origenes_cliente SET nombre = $2 WHERE id = $1 RETURNING *`,
+    [id, nombre]
+  );
+  return rows[0] || null;
+}
+
+async function toggleOrigenActivo(id, activo) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `UPDATE ${schema}.origenes_cliente SET activo = $2 WHERE id = $1 RETURNING *`,
+    [id, activo]
+  );
+  return rows[0] || null;
+}
+
+async function deleteOrigen(id) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `DELETE FROM ${schema}.origenes_cliente WHERE id = $1 RETURNING id`, [id]
+  );
+  return rows[0] || null;
+}
+
 // ----- Servicios: buscar mascotas por nombre (coincidencias) -----
 async function searchMascotasByNombre(nombre) {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
@@ -814,6 +866,7 @@ module.exports = {
   getInicioCajaPorMetodo,
   insertBoutique, getBoutiquePorFecha, deleteBoutique,
   getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
+  getAllOrigenes, getActiveOrigenes, insertOrigen, updateOrigen, toggleOrigenActivo, deleteOrigen,
 };
 
 
