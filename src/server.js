@@ -20,6 +20,7 @@ const {
   getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
   getAllOrigenes, getActiveOrigenes, insertOrigen, updateOrigen, toggleOrigenActivo, deleteOrigen,
   getHojaVidaMascota, getResumenMascotasPorTelefono, getResumenMascotasPorNombre,
+  getPedidosEliminados,
 } = require('./db');
 const { sanitizeClienteInput, validateCliente, sanitizePedidoInput, validatePedido, sanitizeGastoInput, validateGasto } = require('./types');
 const {
@@ -440,15 +441,47 @@ app.delete('/api/mascotas/:id/foto', async (req, res) => {
   }
 });
 
+/**
+ * Elimina un pedido. Exige un MOTIVO: el pedido se archiva en
+ * `pedidos_eliminados` junto con la razón y el usuario, para auditoría.
+ */
 app.delete('/api/pedidos/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!id) return res.status(400).json({ ok: false, errors: ['id inválido'] });
-    const deleted = await deletePedido(id);
+
+    const motivo = String((req.body && req.body.motivo) || '').trim();
+    if (motivo.length < 3) {
+      return res.status(400).json({ ok: false, errors: ['Indica el motivo de la eliminación (mínimo 3 caracteres)'] });
+    }
+    if (motivo.length > 500) {
+      return res.status(400).json({ ok: false, errors: ['El motivo no puede superar 500 caracteres'] });
+    }
+
+    const deleted = await deletePedido(id, {
+      motivo,
+      usuario: (req.session && req.session.username) || null,
+      origen: 'manual',
+    });
     if (!deleted) return res.status(404).json({ ok: false, errors: ['Pedido no encontrado'] });
     res.json({ ok: true });
   } catch (e) {
     console.error('Delete pedido error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
+  }
+});
+
+/** Consulta de auditoría: pedidos eliminados (manuales y por purga). */
+app.get('/api/pedidos-eliminados', async (req, res) => {
+  try {
+    const rows = await getPedidosEliminados({
+      limite: req.query.limite,
+      desde: req.query.desde || null,
+      hasta: req.query.hasta || null,
+    });
+    res.json({ ok: true, data: rows });
+  } catch (e) {
+    console.error('Pedidos eliminados error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno del servidor'] });
   }
 });

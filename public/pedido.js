@@ -1009,15 +1009,101 @@ async function onMascotaChange() {
   syncAllPedidoConstraints();
 }
 
+/**
+ * Pide el motivo de la eliminación en un modal. Devuelve el texto escrito o
+ * null si el usuario cancela. El motivo queda en la auditoría del servidor.
+ */
+function pedirMotivoEliminacion(p) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('motivoModal');
+    const textarea = document.getElementById('motivoTexto');
+    const errorEl = document.getElementById('motivoError');
+    const detalle = document.getElementById('motivoModalDetalle');
+    const aviso = document.getElementById('motivoModalAviso');
+    const btnOk = document.getElementById('motivoConfirmar');
+    const btnCancel = document.getElementById('motivoCancelar');
+    const backdrop = document.getElementById('motivoModalBackdrop');
+    const chips = document.querySelectorAll('#motivoChips .motivo-chip');
+
+    const fecha = p.fecha_hora
+      ? new Date(p.fecha_hora).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      : '';
+    detalle.textContent = `${p.nombre_mascota || 'Sin mascota'} · ${p.servicio || 'Sin servicio'}`
+      + `${fecha ? ` · ${fecha}` : ''}${p.piso ? ` · ${p.piso}` : ''}`;
+
+    if (p.cerrado) {
+      aviso.hidden = false;
+      aviso.textContent = 'Este pedido ya está CERRADO: al eliminarlo dejará de contar en reportes, dashboard y cierre de caja.';
+    } else {
+      aviso.hidden = true;
+    }
+
+    textarea.value = '';
+    errorEl.textContent = '';
+    chips.forEach((c) => c.classList.remove('active'));
+    modal.hidden = false;
+    document.body.classList.add('modal-abierto');
+    setTimeout(() => textarea.focus(), 50);
+
+    function limpiar() {
+      modal.hidden = true;
+      document.body.classList.remove('modal-abierto');
+      chips.forEach((c) => c.removeEventListener('click', onChip));
+      btnOk.removeEventListener('click', onOk);
+      btnCancel.removeEventListener('click', onCancel);
+      backdrop.removeEventListener('click', onCancel);
+      document.removeEventListener('keydown', onKey);
+    }
+
+    function onChip(e) {
+      const btn = e.currentTarget;
+      const preset = btn.getAttribute('data-motivo') || '';
+      chips.forEach((c) => c.classList.toggle('active', c === btn));
+      textarea.value = preset;
+      errorEl.textContent = '';
+      textarea.focus();
+    }
+
+    function onOk() {
+      const motivo = textarea.value.trim();
+      if (motivo.length < 3) {
+        errorEl.textContent = 'Escribe el motivo (mínimo 3 caracteres).';
+        textarea.focus();
+        return;
+      }
+      limpiar();
+      resolve(motivo);
+    }
+
+    function onCancel() {
+      limpiar();
+      resolve(null);
+    }
+
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+      // Ctrl/Cmd + Enter confirma sin salir del textarea.
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); onOk(); }
+    }
+
+    chips.forEach((c) => c.addEventListener('click', onChip));
+    btnOk.addEventListener('click', onOk);
+    btnCancel.addEventListener('click', onCancel);
+    backdrop.addEventListener('click', onCancel);
+    document.addEventListener('keydown', onKey);
+  });
+}
+
 async function eliminarPedido(p) {
   const msg = document.getElementById('pedidosMsg');
-  const cerrado = !!p.cerrado;
-  const texto = cerrado
-    ? 'Este pedido ya está CERRADO. Al eliminarlo se borra el registro en la base de datos: dejará de contar en reportes, dashboard y cierre de caja. ¿Continuar?'
-    : '¿Eliminar este pedido de forma permanente? No se puede deshacer.';
-  if (!window.confirm(texto)) return;
+  const motivo = await pedirMotivoEliminacion(p);
+  if (!motivo) return;
   try {
-    const resp = await fetch(`/api/pedidos/${p.id}`, { method: 'DELETE' });
+    const resp = await fetch(`/api/pedidos/${p.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ motivo }),
+    });
     const body = await resp.json().catch(() => ({}));
     if (!resp.ok || !body.ok) {
       msg.innerHTML = `<span style="color:#f87171">${(body?.errors?.join(', ')) || 'No se pudo eliminar'}</span>`;

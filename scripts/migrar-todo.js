@@ -80,6 +80,37 @@ async function run() {
     return `${r.rowCount} cuenta(s) con ${DIAS_GRACIA} día(s) de gracia`;
   });
 
+  await paso('Auditoría de pedidos eliminados', async () => {
+    await pool.query(`CREATE TABLE IF NOT EXISTS ${s}.pedidos_eliminados (
+      id BIGSERIAL PRIMARY KEY,
+      pedido_id BIGINT,
+      motivo TEXT,
+      eliminado_por VARCHAR(100),
+      origen_eliminacion VARCHAR(30) NOT NULL DEFAULT 'manual',
+      eliminado_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      telefono_propietario VARCHAR(20),
+      fecha_hora TIMESTAMPTZ,
+      piso VARCHAR(20),
+      nombre_mascota VARCHAR(200),
+      raza VARCHAR(100),
+      servicio VARCHAR(200),
+      groomer1 VARCHAR(200),
+      groomer2 VARCHAR(200),
+      precio NUMERIC(12,2),
+      adicionales_descuentos NUMERIC(12,2),
+      precio_final NUMERIC(12,2),
+      metodo_pago VARCHAR(50),
+      cerrado BOOLEAN,
+      datos JSONB NOT NULL
+    )`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS pedidos_eliminados_fecha_idx
+      ON ${s}.pedidos_eliminados (eliminado_at DESC)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS pedidos_eliminados_pedido_idx
+      ON ${s}.pedidos_eliminados (pedido_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS pedidos_eliminados_origen_idx
+      ON ${s}.pedidos_eliminados (origen_eliminacion)`);
+  });
+
   console.log('\n✓ Migraciones aplicadas.\n');
 
   const { rows } = await pool.query(

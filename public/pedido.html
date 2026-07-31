@@ -388,6 +388,40 @@
       <p id="mascotaFotoLightboxError" class="foto-lightbox-error" hidden>No se pudo cargar la imagen.</p>
     </div>
   </div>
+  <!-- Motivo de eliminación: queda registrado en la auditoría -->
+  <div id="motivoModal" class="motivo-modal" hidden role="dialog" aria-modal="true" aria-labelledby="motivoModalTitulo">
+    <div class="motivo-modal-backdrop" id="motivoModalBackdrop" aria-hidden="true"></div>
+    <div class="motivo-modal-card" role="document">
+      <h2 id="motivoModalTitulo" class="motivo-modal-titulo">Eliminar pedido</h2>
+      <p id="motivoModalDetalle" class="motivo-modal-detalle"></p>
+      <p id="motivoModalAviso" class="motivo-modal-aviso" hidden></p>
+
+      <p class="motivo-modal-label">¿Por qué se elimina? <span class="motivo-modal-req">Obligatorio</span></p>
+      <div class="motivo-chips" id="motivoChips">
+        <button type="button" class="motivo-chip" data-motivo="Pedido duplicado">Duplicado</button>
+        <button type="button" class="motivo-chip" data-motivo="Error al digitar el pedido">Error de digitación</button>
+        <button type="button" class="motivo-chip" data-motivo="El cliente canceló el servicio">Cliente canceló</button>
+        <button type="button" class="motivo-chip" data-motivo="Pedido registrado en el piso equivocado">Piso equivocado</button>
+        <button type="button" class="motivo-chip" data-motivo="Prueba o registro de ensayo">Prueba</button>
+        <button type="button" class="motivo-chip" data-motivo="">Otro motivo</button>
+      </div>
+      <textarea
+        id="motivoTexto"
+        class="motivo-textarea"
+        rows="3"
+        maxlength="500"
+        placeholder="Describe el motivo (mínimo 3 caracteres)"
+        aria-label="Motivo de la eliminación"
+      ></textarea>
+      <p id="motivoError" class="motivo-modal-error" aria-live="polite"></p>
+
+      <div class="motivo-modal-acciones">
+        <button type="button" class="btn-secundario" id="motivoCancelar">Cancelar</button>
+        <button type="button" class="btn-danger" id="motivoConfirmar">Eliminar pedido</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/sidebar.js" defer></script>
 
   <script src="/buscar-mascota.js" defer></script>

@@ -248,13 +248,85 @@ async function findPedidosHoyTodosPorTelefono(telefono) {
   return rows;
 }
 
-async function deletePedido(id) {
+/**
+ * SELECT que copia un pedido a la tabla de auditoría. Se comparte entre el
+ * borrado manual y la purga automática para que ambos guarden lo mismo.
+ * `origen` y `motivo` se pasan como parámetros; el resto sale del propio pedido.
+ */
+function sqlArchivarPedidos(schema, whereClause) {
+  return `
+    INSERT INTO ${schema}.pedidos_eliminados (
+      pedido_id, motivo, eliminado_por, origen_eliminacion,
+      telefono_propietario, fecha_hora, piso, nombre_mascota, raza, servicio,
+      groomer1, groomer2, precio, adicionales_descuentos, precio_final,
+      metodo_pago, cerrado, datos
+    )
+    SELECT
+      p.id, $1::text, $2::text, $3::text,
+      p.telefono_propietario, p.fecha_hora, p.piso, p.nombre_mascota, p.raza, p.servicio,
+      p.groomer1, p.groomer2, p.precio, p.adicionales_descuentos,
+      COALESCE(p.precio, 0) + COALESCE(p.adicionales_descuentos, 0),
+      p.metodo_pago, COALESCE(p.cerrado, false), to_jsonb(p)
+    FROM ${schema}.pedidos p
+    WHERE ${whereClause}
+  `;
+}
+
+/**
+ * Elimina un pedido dejando copia en la auditoría. Todo va en una transacción:
+ * si el archivado falla, el pedido NO se borra (nunca se pierde el rastro).
+ * @param {number} id
+ * @param {{motivo?: string, usuario?: string, origen?: string}} contexto
+ */
+async function deletePedido(id, contexto = {}) {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const motivo = contexto.motivo ? String(contexto.motivo).trim() : null;
+  const usuario = contexto.usuario ? String(contexto.usuario).trim() : null;
+  const origen = contexto.origen || 'manual';
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(sqlArchivarPedidos(schema, 'p.id = $4::bigint'), [motivo, usuario, origen, id]);
+    const { rows } = await client.query(
+      `DELETE FROM ${schema}.pedidos WHERE id = $1 RETURNING id`,
+      [id]
+    );
+    await client.query('COMMIT');
+    return rows[0] || null;
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+/** Últimos pedidos eliminados, para consulta rápida desde la app. */
+async function getPedidosEliminados({ limite = 200, desde = null, hasta = null } = {}) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const params = [];
+  let filtros = '';
+  if (desde) {
+    params.push(desde);
+    filtros += ` AND (eliminado_at AT TIME ZONE 'America/Bogota')::date >= $${params.length}::date`;
+  }
+  if (hasta) {
+    params.push(hasta);
+    filtros += ` AND (eliminado_at AT TIME ZONE 'America/Bogota')::date <= $${params.length}::date`;
+  }
+  params.push(Math.min(Number(limite) || 200, 1000));
   const { rows } = await pool.query(
-    `DELETE FROM ${schema}.pedidos WHERE id = $1 RETURNING id`,
-    [id]
+    `SELECT id, pedido_id, motivo, eliminado_por, origen_eliminacion, eliminado_at,
+            telefono_propietario, fecha_hora, piso, nombre_mascota, raza, servicio,
+            groomer1, groomer2, precio_final, metodo_pago, cerrado
+     FROM ${schema}.pedidos_eliminados
+     WHERE true ${filtros}
+     ORDER BY eliminado_at DESC
+     LIMIT $${params.length}`,
+    params
   );
-  return rows[0] || null;
+  return rows;
 }
 
 /**
@@ -268,12 +340,29 @@ async function deletePedido(id) {
 async function purgarPedidosAbiertos(incluirHoy = false) {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
   const cmp = incluirHoy ? '<=' : '<';
-  const { rowCount } = await pool.query(
-    `DELETE FROM ${schema}.pedidos
-     WHERE COALESCE(cerrado, false) = false
-       AND (fecha_hora AT TIME ZONE 'America/Bogota')::date ${cmp} (NOW() AT TIME ZONE 'America/Bogota')::date`
-  );
-  return rowCount;
+  const condicion = `COALESCE(p.cerrado, false) = false
+       AND (p.fecha_hora AT TIME ZONE 'America/Bogota')::date ${cmp} (NOW() AT TIME ZONE 'America/Bogota')::date`;
+  const motivo = incluirHoy
+    ? 'Purga de fin de jornada: pedido quedó abierto sin cerrar.'
+    : 'Purga automática: pedido de una jornada anterior quedó abierto sin cerrar.';
+
+  // Archivar y borrar en una sola transacción: si falla el archivado, no se borra.
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(sqlArchivarPedidos(schema, condicion), [motivo, 'sistema', 'purga_automatica']);
+    const { rowCount } = await client.query(
+      `DELETE FROM ${schema}.pedidos p
+       WHERE ${condicion}`
+    );
+    await client.query('COMMIT');
+    return rowCount;
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 async function cerrarPedido(id) {
@@ -965,6 +1054,7 @@ module.exports = {
   getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
   getAllOrigenes, getActiveOrigenes, insertOrigen, updateOrigen, toggleOrigenActivo, deleteOrigen,
   getHojaVidaMascota, getResumenMascotasPorTelefono, getResumenMascotasPorNombre,
+  getPedidosEliminados,
 };
 
 

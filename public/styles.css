@@ -2313,3 +2313,224 @@ label.file-label input[type="file"] {
   .hv-dl-row { grid-template-columns: 1fr; gap: 2px; }
   .hv-search-row button { width: 100%; }
 }
+
+/* ============================================================
+   Modal de motivo de eliminacion (auditoria)
+   ============================================================ */
+body.modal-abierto { overflow: hidden; }
+
+.motivo-modal {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.motivo-modal[hidden] { display: none; }
+.motivo-modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(2, 6, 23, 0.78);
+  backdrop-filter: blur(3px);
+}
+.motivo-modal-card {
+  position: relative;
+  width: 100%; max-width: 480px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 22px;
+  border-radius: 16px;
+  border: 1px solid #334155;
+  background: linear-gradient(150deg, #172033 0%, #131a2b 100%);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+.motivo-modal-titulo {
+  margin: 0 0 6px; font-size: 1.15rem; font-weight: 800; color: #f8fafc;
+}
+.motivo-modal-detalle {
+  margin: 0 0 12px; font-size: 0.84rem; color: #94a3b8; line-height: 1.45;
+}
+.motivo-modal-aviso {
+  margin: 0 0 14px; padding: 10px 12px;
+  border-radius: 9px; font-size: 0.8rem; line-height: 1.45;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.32);
+  color: #fca5a5;
+}
+.motivo-modal-label {
+  margin: 0 0 9px; font-size: 0.86rem; font-weight: 700; color: #e2e8f0;
+}
+.motivo-modal-req {
+  display: inline-block; margin-left: 6px; padding: 2px 8px;
+  border-radius: 999px; font-size: 0.66rem; font-weight: 700;
+  background: rgba(245, 158, 11, 0.16); color: #fcd34d;
+}
+.motivo-chips {
+  display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px;
+}
+.motivo-chip {
+  padding: 7px 13px; border-radius: 999px;
+  border: 1px solid #4b5563; background: #1f2937; color: #cbd5e1;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  transition: all 0.16s ease;
+}
+.motivo-chip:hover { border-color: #6b7280; color: #f1f5f9; }
+.motivo-chip.active {
+  background: rgba(99, 102, 241, 0.2); border-color: #6366f1; color: #c7d2fe;
+}
+.motivo-textarea {
+  width: 100%; box-sizing: border-box; margin: 0;
+  padding: 11px 13px; border-radius: 10px;
+  border: 1px solid #475569; background: #0f172a; color: #f1f5f9;
+  font-family: inherit; font-size: 0.9rem; line-height: 1.5;
+  resize: vertical; min-height: 76px;
+}
+.motivo-textarea:focus {
+  outline: none; border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+.motivo-modal-error {
+  margin: 8px 0 0; min-height: 1.1em;
+  font-size: 0.8rem; color: #f87171;
+}
+.motivo-modal-acciones {
+  display: flex; gap: 9px; justify-content: flex-end; margin-top: 18px;
+}
+.motivo-modal-acciones button { margin: 0; }
+.btn-secundario {
+  padding: 10px 18px; border-radius: 9px;
+  border: 1px solid #475569; background: #1e293b; color: #cbd5e1;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 0.85rem; font-weight: 600; cursor: pointer;
+}
+.btn-secundario:hover { background: #283548; color: #f1f5f9; }
+
+/* ============================================================
+   Optimizacion movil
+   Ajustes progresivos: la base de escritorio se conserva y aqui
+   se corrigen los puntos que fallan en pantallas pequenas.
+   ============================================================ */
+
+/*
+ * Red de seguridad contra el scroll horizontal de la pagina.
+ * Se usa `clip` y no `hidden` a proposito: `hidden` convertiria el eje vertical
+ * en scrollable y romperia los layouts que dependen de 100vh (BI, sidebar).
+ */
+body { max-width: 100%; overflow-x: clip; }
+
+/* Cualquier tabla ancha se desplaza dentro de su contenedor, no la pagina */
+.dash-table-wrap,
+.hv-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  /* --- Tipografia y respiracion --- */
+  .container, .dash-container { padding: 14px 12px; }
+  h1 { font-size: 1.35rem; line-height: 1.25; }
+  h2 { font-size: 1.1rem; }
+  fieldset { padding: 12px 11px; }
+  legend { font-size: 0.9rem; }
+
+  /* --- Formularios: una columna y campos comodos --- */
+  /* Estos ya son grid en la base: solo se colapsan a una columna. */
+  .pedido-inline-fields,
+  .pedido-layout-grid,
+  .mixto-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  /* Este es flex: se apila sin cambiarle el tipo de display. */
+  .dash-filters { flex-direction: column; align-items: stretch; }
+  .dash-filters label { min-width: 0; width: 100%; flex: none; }
+  .dash-filters button { width: 100%; }
+
+  /*
+   * 16px evita que iOS haga zoom automatico al enfocar un campo.
+   * Es el ajuste movil que mas se nota en el dia a dia del spa.
+   */
+  input, select, textarea {
+    font-size: 16px;
+    padding: 11px 12px;
+  }
+
+  /* --- Areas tactiles: minimo comodo para el dedo --- */
+  button,
+  .btn-primary,
+  .btn-danger,
+  .btn-success,
+  .btn-secundario,
+  .hv-accion,
+  .motivo-chip,
+  .tc-tag {
+    min-height: 44px;
+  }
+  .groomer-actions button,
+  .pedido-actions button {
+    min-height: 40px;
+    padding: 8px 14px;
+    flex: 1;
+  }
+  .groomer-actions,
+  .pedido-actions {
+    display: flex; flex-wrap: wrap; gap: 6px; width: 100%;
+  }
+
+  /* --- Tarjetas de lista: apiladas, no comprimidas --- */
+  .groomer-card {
+    flex-direction: column; align-items: stretch; gap: 10px;
+  }
+
+  /* --- Buscadores --- */
+  .pedido-search-row,
+  .hv-search-row { flex-direction: column; }
+  .pedido-search-row button,
+  .hv-search-row button { width: 100%; }
+  .groomers-toolbar { flex-direction: column; align-items: stretch; }
+  .groomers-filter-label { width: 100%; }
+  .groomers-filter-select,
+  .groomers-search-input { width: 100%; min-width: 0; }
+
+  /* --- Tablas: densidad reducida para que quepa mas --- */
+  .dash-table { font-size: 0.78rem; }
+  .dash-table th, .dash-table td { padding: 8px 9px; white-space: nowrap; }
+
+  /* --- Pestanas desplazables en vez de amontonadas --- */
+  .dash-tabs, .dash-mode-toggle {
+    display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .dash-tabs::-webkit-scrollbar, .dash-mode-toggle::-webkit-scrollbar { display: none; }
+  .dash-tab, .dash-mode { flex-shrink: 0; }
+
+  /* --- Modal a ancho completo --- */
+  .motivo-modal { padding: 10px; align-items: flex-end; }
+  .motivo-modal-card { max-width: none; border-radius: 16px 16px 12px 12px; }
+  .motivo-modal-acciones { flex-direction: column-reverse; }
+  .motivo-modal-acciones button { width: 100%; }
+
+  /* --- Hoja de vida --- */
+  .hv-kpis { grid-template-columns: repeat(2, 1fr); }
+  .hv-grid { grid-template-columns: 1fr; }
+  .hv-contacto-acciones .hv-accion { flex: 1; text-align: center; }
+
+  /* --- Aviso de contrasena: no tapar contenido --- */
+  .pw-warning-bar { font-size: 0.8rem; padding: 10px 12px; }
+
+  /* --- Logo flotante mas discreto --- */
+  .app-floating-logo { transform: scale(0.8); transform-origin: top right; }
+}
+
+@media (max-width: 420px) {
+  .hv-kpis { grid-template-columns: 1fr; }
+  .tipo-cliente-tags { gap: 6px; }
+  .tc-tag { flex: 1; min-width: 0; padding: 9px 8px; font-size: 0.8rem; }
+  .motivo-chip { flex: 1 1 calc(50% - 4px); text-align: center; }
+  .app-footer { font-size: 0.72rem; padding: 18px 12px; }
+}
+
+/* En pantallas tactiles no hay hover real: evita estados "pegados" */
+@media (hover: none) {
+  .bi-card:hover,
+  .hv-res-card:hover,
+  .groomer-card:hover { transform: none; }
+}
