@@ -63,3 +63,33 @@
     }
   });
 })();
+
+/**
+ * Aviso de contraseña próxima a caducar. Se muestra en todas las páginas para
+ * que nadie se entere el día que ya no puede entrar.
+ */
+(async function avisoPassword() {
+  try {
+    const r = await fetch('/api/me');
+    if (!r.ok) return;
+    const me = await r.json();
+    if (me.mustChangePassword) {
+      window.location.href = '/cambiar-password.html';
+      return;
+    }
+    if (!me.passwordPorCaducar || me.passwordDiasRestantes == null) return;
+
+    const dias = me.passwordDiasRestantes;
+    const bar = document.createElement('div');
+    bar.className = 'pw-warning-bar';
+    bar.innerHTML = `
+      <span class="pw-warning-text">
+        Tu contraseña caduca en <strong>${dias} día${dias === 1 ? '' : 's'}</strong>.
+      </span>
+      <a class="pw-warning-link" href="/cambiar-password.html">Cambiarla ahora</a>
+      <button type="button" class="pw-warning-close" aria-label="Ocultar aviso">&times;</button>
+    `;
+    bar.querySelector('.pw-warning-close').addEventListener('click', () => bar.remove());
+    document.body.appendChild(bar);
+  } catch { /* el aviso es informativo: si falla, no molestamos */ }
+})();

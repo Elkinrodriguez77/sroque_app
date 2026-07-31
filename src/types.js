@@ -57,6 +57,9 @@ module.exports = {
 };
 
 // -------- Pedidos --------
+/** Tag opcional de clasificación del cliente en el pedido. */
+const TIPOS_CLIENTE = ['Antiguo', 'Nuevo', 'VIP'];
+
 function toNumberOrZero(value) {
   if (value === '' || value === undefined || value === null) return 0;
   const n = Number(value);
@@ -99,6 +102,7 @@ function sanitizePedidoInput(input) {
     groomer1: input.groomer1 ? String(input.groomer1).trim() : undefined,
     groomer2: input.groomer2 ? String(input.groomer2).trim() : undefined,
     origen_cliente: input.origen_cliente ? String(input.origen_cliente).trim().slice(0, 80) : undefined,
+    tipo_cliente: TIPOS_CLIENTE.includes(input.tipo_cliente) ? input.tipo_cliente : undefined,
   };
 }
 
@@ -115,6 +119,7 @@ function validatePedido(pedido) {
 
 module.exports.sanitizePedidoInput = sanitizePedidoInput;
 module.exports.validatePedido = validatePedido;
+module.exports.TIPOS_CLIENTE = TIPOS_CLIENTE;
 
 // -------- Gastos --------
 function sanitizeGastoInput(input) {

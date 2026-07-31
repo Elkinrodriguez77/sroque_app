@@ -133,9 +133,10 @@ async function insertPedido(pedido) {
       groomer2,
       mascota_id,
       nombre_mascota,
-      origen_cliente
+      origen_cliente,
+      tipo_cliente
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21
     ) RETURNING id;
   `;
   const values = [
@@ -159,6 +160,7 @@ async function insertPedido(pedido) {
     pedido.mascota_id || null,
     pedido.nombre_mascota || null,
     pedido.origen_cliente || null,
+    pedido.tipo_cliente || null,
   ];
   const { rows } = await pool.query(text, values);
   return rows[0];
@@ -187,8 +189,9 @@ async function updatePedido(id, pedido) {
       groomer2 = $17,
       mascota_id = $18,
       nombre_mascota = $19,
-      origen_cliente = $20
-    WHERE id = $21
+      origen_cliente = $20,
+      tipo_cliente = $21
+    WHERE id = $22
     RETURNING id;
   `;
   const values = [
@@ -212,6 +215,7 @@ async function updatePedido(id, pedido) {
     pedido.mascota_id || null,
     pedido.nombre_mascota || null,
     pedido.origen_cliente || null,
+    pedido.tipo_cliente || null,
     id,
   ];
   const { rows } = await pool.query(text, values);
@@ -655,6 +659,99 @@ async function getPedidosPorMascota(mascotaId) {
   return rows;
 }
 
+// ----- Hoja de vida de la mascota -----
+/**
+ * Ficha completa de una mascota: sus datos clínicos//de cuidado, el cliente
+ * dueño y TODO su historial de servicios (más reciente primero).
+ * Los pedidos se cruzan por mascota_id y, como respaldo, por teléfono+nombre,
+ * porque los pedidos antiguos se guardaron sin mascota_id.
+ */
+async function getHojaVidaMascota(mascotaId) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+
+  const { rows: mRows } = await pool.query(
+    `SELECT id, telefono_propietario, nombre_mascota, tipo_mascota, raza, tamano, pelaje,
+            alimento_mascota, fecha_nacimiento, fecha_antipulgas, producto_antipulgas,
+            fecha_antiparasitario, producto_antiparasitario, alergias, observaciones,
+            foto_referencia
+     FROM ${schema}.mascotas WHERE id = $1 LIMIT 1`,
+    [mascotaId]
+  );
+  const mascota = mRows[0];
+  if (!mascota) return null;
+
+  const { rows: cRows } = await pool.query(
+    `SELECT telefono_propietario, telefono_acudiente, nombre_propietario, nombre_acudiente,
+            email, perfil_instagram, direccion
+     FROM ${schema}.clientes WHERE telefono_propietario = $1 LIMIT 1`,
+    [mascota.telefono_propietario]
+  );
+
+  const { rows: servicios } = await pool.query(
+    `SELECT id, fecha_hora, servicio, piso, raza, tamano, pelaje,
+            groomer1, groomer2, metodo_pago, origen_cliente, tipo_cliente, cerrado,
+            precio, adicionales_descuentos,
+            (COALESCE(precio,0) + COALESCE(adicionales_descuentos,0)) AS precio_final
+     FROM ${schema}.pedidos
+     WHERE mascota_id = $1
+        OR (telefono_propietario = $2 AND nombre_mascota = $3)
+     ORDER BY fecha_hora DESC`,
+    [mascotaId, mascota.telefono_propietario, mascota.nombre_mascota]
+  );
+
+  return { mascota, cliente: cRows[0] || null, servicios };
+}
+
+/**
+ * Mascotas de un teléfono con un resumen para gestión (última visita y total
+ * de servicios), para poder elegir a cuál abrirle la hoja de vida.
+ */
+async function getResumenMascotasPorTelefono(telefono) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `SELECT m.id, m.nombre_mascota, m.tipo_mascota, m.raza, m.telefono_propietario,
+            c.nombre_propietario,
+            s.ultima_visita, COALESCE(s.total_servicios, 0) AS total_servicios
+     FROM ${schema}.mascotas m
+     LEFT JOIN ${schema}.clientes c ON c.telefono_propietario = m.telefono_propietario
+     LEFT JOIN LATERAL (
+       SELECT MAX(p.fecha_hora) AS ultima_visita, COUNT(*) AS total_servicios
+       FROM ${schema}.pedidos p
+       WHERE p.mascota_id = m.id
+          OR (p.telefono_propietario = m.telefono_propietario AND p.nombre_mascota = m.nombre_mascota)
+     ) s ON true
+     WHERE m.telefono_propietario = $1
+     ORDER BY s.ultima_visita DESC NULLS LAST, m.nombre_mascota`,
+    [telefono]
+  );
+  return rows;
+}
+
+/** Igual que el anterior, pero buscando por nombre de mascota (coincidencias). */
+async function getResumenMascotasPorNombre(nombre) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const term = `%${String(nombre || '').trim()}%`;
+  if (term === '%%') return [];
+  const { rows } = await pool.query(
+    `SELECT m.id, m.nombre_mascota, m.tipo_mascota, m.raza, m.telefono_propietario,
+            c.nombre_propietario,
+            s.ultima_visita, COALESCE(s.total_servicios, 0) AS total_servicios
+     FROM ${schema}.mascotas m
+     LEFT JOIN ${schema}.clientes c ON c.telefono_propietario = m.telefono_propietario
+     LEFT JOIN LATERAL (
+       SELECT MAX(p.fecha_hora) AS ultima_visita, COUNT(*) AS total_servicios
+       FROM ${schema}.pedidos p
+       WHERE p.mascota_id = m.id
+          OR (p.telefono_propietario = m.telefono_propietario AND p.nombre_mascota = m.nombre_mascota)
+     ) s ON true
+     WHERE m.nombre_mascota ILIKE $1
+     ORDER BY s.ultima_visita DESC NULLS LAST, m.nombre_mascota
+     LIMIT 50`,
+    [term]
+  );
+  return rows;
+}
+
 // ----- Gastos -----
 async function insertGasto(gasto) {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
@@ -867,6 +964,7 @@ module.exports = {
   insertBoutique, getBoutiquePorFecha, deleteBoutique,
   getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
   getAllOrigenes, getActiveOrigenes, insertOrigen, updateOrigen, toggleOrigenActivo, deleteOrigen,
+  getHojaVidaMascota, getResumenMascotasPorTelefono, getResumenMascotasPorNombre,
 };
 
 

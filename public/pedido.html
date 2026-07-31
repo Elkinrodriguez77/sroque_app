@@ -32,6 +32,12 @@
           </a>
         </li>
         <li>
+          <a href="/hoja-vida.html" class="sidebar-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="9" r="1.6"/><circle cx="9" cy="6.6" r="1.1"/><circle cx="15" cy="6.6" r="1.1"/></svg>
+            <span class="sidebar-label">Hoja de vida</span>
+          </a>
+        </li>
+        <li>
           <a href="/groomers.html" class="sidebar-link">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             <span class="sidebar-label">Equipo</span>
@@ -145,6 +151,17 @@
             <label id="origenOtroWrapper" hidden>Especifica el origen *
               <input name="origen_cliente_otro" type="text" maxlength="80" placeholder="¿Cuál? Ej: feria, evento, alianza..." />
             </label>
+
+            <div class="tipo-cliente-field">
+              <span class="tipo-cliente-legend">Tipo Cliente <span class="hint" style="font-weight:400">(opcional)</span></span>
+              <div class="tipo-cliente-tags" id="tipoClienteTags" role="group" aria-label="Tipo de cliente">
+                <button type="button" class="tc-tag tc-tag-antiguo" data-tipo="Antiguo" aria-pressed="false">Antiguo</button>
+                <button type="button" class="tc-tag tc-tag-nuevo" data-tipo="Nuevo" aria-pressed="false">Nuevo</button>
+                <button type="button" class="tc-tag tc-tag-vip" data-tipo="VIP" aria-pressed="false">VIP</button>
+                <button type="button" class="tc-tag-clear" id="tipoClienteClear" hidden aria-label="Quitar tipo de cliente">Quitar</button>
+              </div>
+              <input type="hidden" name="tipo_cliente" id="tipoClienteValue" value="" />
+            </div>
           </fieldset>
         </div>
 
@@ -360,7 +377,7 @@
       </div>
     </form>
   </main>
-  <footer class="app-footer">Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
+  <footer class="app-footer"><span class="app-version">v3.0</span> Creado con <span class="heart">&#10084;</span> por <a href="https://www.dataworld.com.co" target="_blank" rel="noopener">Data World</a></footer>
 </div>
 
   <div id="mascotaFotoLightbox" class="foto-lightbox" hidden role="dialog" aria-modal="true" aria-label="Foto ampliada">

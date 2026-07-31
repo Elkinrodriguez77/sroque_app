@@ -129,3 +129,31 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .pet { animation: none; opacity: 0.04; }
 }
+
+/* ---- Pantalla de cambio de contraseña ---- */
+.pw-motivo-alerta {
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+.pw-rules {
+  text-align: left;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+}
+.pw-rules-title {
+  font-size: 0.8rem; font-weight: 600; color: #a5b4fc; margin: 0 0 6px;
+}
+.pw-rules ul { margin: 0; padding-left: 18px; }
+.pw-rules li { font-size: 0.78rem; color: #9ca3af; line-height: 1.7; }
+.pw-rules li strong { color: #d1d5db; }
+.login-errors.login-ok { color: #34d399; }
+.pw-logout-line { margin-top: 16px; font-size: 0.8rem; }
+.pw-logout-line a { color: #9ca3af; text-decoration: underline; }
+.pw-logout-line a:hover { color: #e5e7eb; }
+.login-card button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }

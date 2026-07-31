@@ -163,6 +163,7 @@ async function consultarIngresos() {
         <td>${fechaHora}</td>
         <td>${r.nombre_propietario || '-'}</td>
         <td>${r.nombre_mascota || '-'}</td>
+        <td>${r.raza || '-'}</td>
         <td>${r.servicio || '-'}</td>
         <td>${r.piso || '-'}</td>
         <td>${r.tamano || '-'}</td>
@@ -179,7 +180,7 @@ async function consultarIngresos() {
 
     const trF = document.createElement('tr');
     trF.innerHTML = `
-      <td colspan="7"><strong>TOTAL (${rows.length} pedidos)</strong></td>
+      <td colspan="8"><strong>TOTAL (${rows.length} pedidos)</strong></td>
       <td><strong>${fmt.format(totalPrecio)}</strong></td>
       <td class="${totalAdic < 0 ? 'txt-red' : 'txt-green'}"><strong>${fmt.format(totalAdic)}</strong></td>
       <td><strong>${fmt.format(totalIngresos)}</strong></td>

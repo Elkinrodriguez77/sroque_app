@@ -59,11 +59,12 @@ function backToChooser() {
   try {
     const r = await fetch('/api/me');
     if (!r.ok) { window.location.href = '/login.html'; return; }
-    const { nombre, username } = await r.json();
+    const { nombre, username, esOwner } = await r.json();
     const badge = document.getElementById('userBadge');
     if (badge) badge.textContent = nombre || username || '';
 
-    BI_IS_SUPER = username === BI_SUPERADMIN_USER;
+    // El dueño (rol owner) ve todo, igual que kathe_superadmin.
+    BI_IS_SUPER = username === BI_SUPERADMIN_USER || esOwner === true;
     if (cardFollowup) cardFollowup.hidden = !BI_IS_SUPER;
   } catch { window.location.href = '/login.html'; }
 })();

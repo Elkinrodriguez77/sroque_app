@@ -39,6 +39,9 @@ const ORIGENES_CLIENTE_FALLBACK = [
 ];
 let ORIGENES_CLIENTE = [...ORIGENES_CLIENTE_FALLBACK, ORIGEN_OTROS];
 
+/** Tags de clasificación del cliente (campo opcional). Debe coincidir con src/types.js. */
+const TIPOS_CLIENTE = ['Antiguo', 'Nuevo', 'VIP'];
+
 /**
  * Precios sugeridos (COP). Editar aquí para actualizar tarifas.
  * - manto_corto: pelaje "Corto"
@@ -246,6 +249,31 @@ function initGroomerPickers() {
 
   attach('1');
   attach('2');
+}
+
+/** Tag opcional «Tipo Cliente». Al tocar el tag activo se deselecciona. */
+function setTipoClienteValue(val) {
+  const hidden = document.getElementById('tipoClienteValue');
+  const clear = document.getElementById('tipoClienteClear');
+  const v = TIPOS_CLIENTE.includes(val) ? val : '';
+  if (hidden) hidden.value = v;
+  document.querySelectorAll('#tipoClienteTags .tc-tag').forEach((btn) => {
+    const on = btn.getAttribute('data-tipo') === v;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  if (clear) clear.hidden = !v;
+}
+
+function initTipoClientePicker() {
+  document.querySelectorAll('#tipoClienteTags .tc-tag').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tipo = btn.getAttribute('data-tipo');
+      const actual = document.getElementById('tipoClienteValue')?.value || '';
+      setTipoClienteValue(actual === tipo ? '' : tipo);
+    });
+  });
+  document.getElementById('tipoClienteClear')?.addEventListener('click', () => setTipoClienteValue(''));
 }
 
 /** Muestra/oculta el campo "Especifica el origen" según la selección. */
@@ -675,6 +703,7 @@ async function submitPedido(event) {
     form.reset();
     setRazaValue('');
     setOrigenValue('');
+    setTipoClienteValue('');
     document.getElementById('precioSugerido').hidden = true;
     document.getElementById('mixtoWrapper').hidden = true;
     document.getElementById('adicInfoPopup').hidden = true;
@@ -892,6 +921,7 @@ async function cargarPedidoEnFormulario(p) {
   setGroomerPickerValue('1', p.groomer1 || '');
   setGroomerPickerValue('2', p.groomer2 || '');
   setOrigenValue(p.origen_cliente || '');
+  setTipoClienteValue(p.tipo_cliente || '');
   updateMoney();
   document.getElementById('precioSugerido').hidden = true;
   suggestPrice();
@@ -999,6 +1029,7 @@ async function eliminarPedido(p) {
       form.elements['id'].value = '';
       setRazaValue('');
       setOrigenValue('');
+      setTipoClienteValue('');
       syncAllPedidoConstraints();
       updateMoney();
       document.getElementById('precioSugerido').hidden = true;
@@ -1029,6 +1060,7 @@ async function cerrarPedido(id) {
     form.reset();
     setRazaValue('');
     setOrigenValue('');
+    setTipoClienteValue('');
     syncAllPedidoConstraints();
     updateMoney();
     document.getElementById('precioSugerido').hidden = true;
@@ -1163,6 +1195,7 @@ function init() {
   initRazaDropdown();
   initGroomerPickers();
   initOrigenPicker();
+  initTipoClientePicker();
 
   document.querySelector('#pedidoForm [name="origen_cliente_otro"]')
     ?.addEventListener('input', syncOrigenRequiredValidity);

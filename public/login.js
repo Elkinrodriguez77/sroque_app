@@ -26,7 +26,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       errEl.textContent = (body.errors && body.errors.join(', ')) || 'Error al iniciar sesión';
       return;
     }
-    window.location.href = '/';
+    // Contraseña caducada u obligada a cambiar: va directo a definir una nueva.
+    window.location.href = body.mustChangePassword ? '/cambiar-password.html' : '/';
   } catch {
     errEl.textContent = 'Error de red. Intente de nuevo.';
   }

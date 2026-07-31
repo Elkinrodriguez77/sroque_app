@@ -19,9 +19,13 @@ const {
   insertBoutique, getBoutiquePorFecha, deleteBoutique,
   getAllGroomers, getActiveGroomers, insertGroomer, updateGroomer, toggleGroomerActivo,
   getAllOrigenes, getActiveOrigenes, insertOrigen, updateOrigen, toggleOrigenActivo, deleteOrigen,
+  getHojaVidaMascota, getResumenMascotasPorTelefono, getResumenMascotasPorNombre,
 } = require('./db');
 const { sanitizeClienteInput, validateCliente, sanitizePedidoInput, validatePedido, sanitizeGastoInput, validateGasto } = require('./types');
-const { findUserByUsername, verifyPassword, requireAuth, loginRateLimiter, recordFailedAttempt, clearAttempts } = require('./auth');
+const {
+  findUserByUsername, verifyPassword, requireAuth, loginRateLimiter, recordFailedAttempt, clearAttempts,
+  estadoPassword, validarPassword, requirePasswordVigente, changePassword, ROL_OWNER,
+} = require('./auth');
 const { MAX_UPLOAD_BYTES, isAllowedMime, procesarBufferAWebp } = require('./mascotaFoto');
 
 const app = express();
@@ -63,6 +67,9 @@ app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, '..', 'pu
 app.get('/login.css', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'login.css')));
 app.get('/login.js', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'login.js')));
 app.get('/styles.css', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'styles.css')));
+// La pantalla de cambio de clave debe cargar aunque la sesión esté en cuarentena.
+app.get('/cambiar-password.html', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'cambiar-password.html')));
+app.get('/cambiar-password.js', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'cambiar-password.js')));
 
 app.post('/api/login', loginRateLimiter, async (req, res) => {
   try {
@@ -82,10 +89,21 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
       return res.status(401).json({ ok: false, errors: ['Credenciales inválidas'] });
     }
     clearAttempts(req);
+    const pw = estadoPassword(user);
     req.session.userId = user.id;
     req.session.username = user.username;
     req.session.nombre = user.nombre;
-    res.json({ ok: true, nombre: user.nombre });
+    req.session.rol = user.rol || 'user';
+    req.session.mustChangePassword = pw.debeCambiar;
+    res.json({
+      ok: true,
+      nombre: user.nombre,
+      rol: req.session.rol,
+      mustChangePassword: pw.debeCambiar,
+      passwordMotivo: pw.motivo,
+      passwordDiasRestantes: pw.diasRestantes,
+      passwordPorCaducar: pw.porCaducar,
+    });
   } catch (e) {
     console.error('Login error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno'] });
@@ -96,11 +114,72 @@ app.post('/api/logout', (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
 });
 
-app.get('/api/me', (req, res) => {
-  if (req.session && req.session.userId) {
-    return res.json({ ok: true, nombre: req.session.nombre, username: req.session.username });
+app.get('/api/me', async (req, res) => {
+  if (!req.session || !req.session.userId) return res.status(401).json({ ok: false });
+  const base = {
+    ok: true,
+    nombre: req.session.nombre,
+    username: req.session.username,
+    rol: req.session.rol || 'user',
+    esOwner: (req.session.rol || 'user') === ROL_OWNER,
+    mustChangePassword: !!req.session.mustChangePassword,
+  };
+  // Estado fresco de la contraseña para poder avisar "caduca en N días".
+  try {
+    const user = await findUserByUsername(req.session.username);
+    if (user) {
+      const pw = estadoPassword(user);
+      req.session.mustChangePassword = pw.debeCambiar;
+      return res.json({
+        ...base,
+        rol: user.rol,
+        esOwner: user.rol === ROL_OWNER,
+        mustChangePassword: pw.debeCambiar,
+        passwordMotivo: pw.motivo,
+        passwordDiasRestantes: pw.diasRestantes,
+        passwordPorCaducar: pw.porCaducar,
+      });
+    }
+  } catch (e) {
+    console.error('Estado password error:', e);
   }
-  res.status(401).json({ ok: false });
+  res.json(base);
+});
+
+/** Cambio de contraseña por el propio usuario (exige la contraseña actual). */
+app.post('/api/cambiar-password', async (req, res) => {
+  try {
+    if (!req.session || !req.session.userId) {
+      return res.status(401).json({ ok: false, errors: ['No autenticado'] });
+    }
+    const { password_actual, password_nueva, password_confirmar } = req.body || {};
+    if (!password_actual || !password_nueva) {
+      return res.status(400).json({ ok: false, errors: ['Contraseña actual y nueva son requeridas'] });
+    }
+    if (password_nueva !== password_confirmar) {
+      return res.status(400).json({ ok: false, errors: ['La confirmación no coincide con la contraseña nueva'] });
+    }
+
+    const user = await findUserByUsername(req.session.username);
+    if (!user) return res.status(404).json({ ok: false, errors: ['Usuario no encontrado'] });
+
+    const valid = await verifyPassword(password_actual, user.password_hash);
+    if (!valid) return res.status(401).json({ ok: false, errors: ['La contraseña actual no es correcta'] });
+
+    if (await verifyPassword(password_nueva, user.password_hash)) {
+      return res.status(400).json({ ok: false, errors: ['La contraseña nueva debe ser distinta de la actual'] });
+    }
+
+    const errors = validarPassword(password_nueva, user.username);
+    if (errors.length) return res.status(400).json({ ok: false, errors });
+
+    await changePassword(user.username, password_nueva);
+    req.session.mustChangePassword = false;
+    res.json({ ok: true, mensaje: 'Contraseña actualizada correctamente.' });
+  } catch (e) {
+    console.error('Cambiar password error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
 });
 
 // Fotos de referencia: lectura pública por URL (nombre tipo UUID); <img> no siempre manda sesión como la barra del navegador.
@@ -112,6 +191,8 @@ app.use(
 
 // --- Todo lo demás requiere autenticación ---
 app.use(requireAuth);
+// ...y una contraseña vigente: si caducó, solo se puede ir a cambiarla.
+app.use(requirePasswordVigente);
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
@@ -761,6 +842,160 @@ app.patch('/api/groomers/:id/toggle', async (req, res) => {
     res.status(500).json({ ok: false, errors: ['Error interno'] });
   }
 });
+
+// -------- Hoja de vida de la mascota --------
+/**
+ * Semáforo de gestión según los días sin visitar. Los cortes salen del ciclo
+ * habitual de baño (~1 mes): al día, por vencer, atrasado o dormido.
+ */
+function semaforoVisita(dias) {
+  if (dias == null) {
+    return { nivel: 'sin-datos', etiqueta: 'Sin visitas registradas', accion: 'Nunca ha tomado un servicio en el sistema.' };
+  }
+  if (dias <= 30) {
+    return { nivel: 'verde', etiqueta: 'Al día', accion: 'Cliente activo. Mantener el ritmo de contacto habitual.' };
+  }
+  if (dias <= 45) {
+    return { nivel: 'amarillo', etiqueta: 'Por agendar', accion: 'Ya pasó su ciclo de baño: buen momento para escribirle.' };
+  }
+  if (dias <= 90) {
+    return { nivel: 'naranja', etiqueta: 'Atrasado', accion: 'Lleva más de un mes y medio sin venir. Contactar para recuperar.' };
+  }
+  return { nivel: 'rojo', etiqueta: 'Cliente dormido', accion: 'Más de 3 meses sin venir. Priorizar campaña de reactivación.' };
+}
+
+/** Días completos transcurridos entre una fecha y hoy. */
+function diasDesde(fecha) {
+  if (!fecha) return null;
+  const t = new Date(fecha).getTime();
+  if (!Number.isFinite(t)) return null;
+  return Math.max(0, Math.floor((Date.now() - t) / 86400000));
+}
+
+/** El valor más frecuente de una lista (para groomer y servicio favoritos). */
+function masFrecuente(valores) {
+  const conteo = new Map();
+  for (const v of valores) {
+    const key = String(v || '').trim();
+    if (!key) continue;
+    conteo.set(key, (conteo.get(key) || 0) + 1);
+  }
+  let top = null;
+  let max = 0;
+  for (const [k, n] of conteo) {
+    if (n > max) { max = n; top = k; }
+  }
+  return top ? { valor: top, veces: max } : null;
+}
+
+app.get('/api/hoja-vida/buscar', async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (q.length < 2) {
+      return res.status(400).json({ ok: false, errors: ['Escribe al menos 2 caracteres'] });
+    }
+    const soloDigitos = q.replace(/[\s\-()]/g, '');
+    const esTelefono = /^\d+$/.test(soloDigitos);
+    const rows = esTelefono
+      ? await getResumenMascotasPorTelefono(soloDigitos)
+      : await getResumenMascotasPorNombre(q);
+
+    const data = rows.map((m) => {
+      const dias = diasDesde(m.ultima_visita);
+      return { ...m, dias_sin_venir: dias, semaforo: semaforoVisita(dias) };
+    });
+    res.json({ ok: true, data, modo: esTelefono ? 'telefono' : 'nombre' });
+  } catch (e) {
+    console.error('Hoja de vida buscar error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+app.get('/api/hoja-vida/:mascotaId', async (req, res) => {
+  try {
+    const mascotaId = Number(req.params.mascotaId);
+    if (!mascotaId) return res.status(400).json({ ok: false, errors: ['mascota_id inválido'] });
+
+    const ficha = await getHojaVidaMascota(mascotaId);
+    if (!ficha) return res.status(404).json({ ok: false, errors: ['Mascota no encontrada'] });
+
+    const { mascota, cliente, servicios } = ficha;
+    const ultimo = servicios[0] || null;
+    const dias = diasDesde(ultimo && ultimo.fecha_hora);
+
+    const totalGastado = servicios.reduce((acc, s) => acc + Number(s.precio_final || 0), 0);
+    const ticketPromedio = servicios.length ? Math.round(totalGastado / servicios.length) : 0;
+
+    // Frecuencia media entre visitas: sirve para saber si se está espaciando.
+    let frecuenciaDias = null;
+    if (servicios.length >= 2) {
+      const primera = new Date(servicios[servicios.length - 1].fecha_hora).getTime();
+      const ultima = new Date(servicios[0].fecha_hora).getTime();
+      if (Number.isFinite(primera) && Number.isFinite(ultima) && ultima > primera) {
+        frecuenciaDias = Math.round((ultima - primera) / 86400000 / (servicios.length - 1));
+      }
+    }
+
+    const groomers = [];
+    for (const s of servicios) {
+      if (s.groomer1) groomers.push(s.groomer1);
+      if (s.groomer2) groomers.push(s.groomer2);
+    }
+
+    res.json({
+      ok: true,
+      data: {
+        mascota: {
+          ...mascota,
+          edad: calcularEdad(mascota.fecha_nacimiento),
+          foto_url: mascota.foto_referencia ? `/uploads/mascotas/${encodeURIComponent(mascota.foto_referencia)}` : null,
+        },
+        cliente,
+        gestion: {
+          dias_sin_venir: dias,
+          semaforo: semaforoVisita(dias),
+          ultima_visita: ultimo ? ultimo.fecha_hora : null,
+          ultimo_servicio: ultimo ? ultimo.servicio : null,
+          ultimo_groomer: ultimo ? [ultimo.groomer1, ultimo.groomer2].filter(Boolean).join(' y ') : null,
+          ultimo_piso: ultimo ? ultimo.piso : null,
+          ultimo_valor: ultimo ? Number(ultimo.precio_final || 0) : null,
+          tipo_cliente: servicios.find((s) => s.tipo_cliente)?.tipo_cliente || null,
+          origen_cliente: servicios.find((s) => s.origen_cliente)?.origen_cliente || null,
+        },
+        estadisticas: {
+          total_servicios: servicios.length,
+          total_gastado: totalGastado,
+          ticket_promedio: ticketPromedio,
+          frecuencia_dias: frecuenciaDias,
+          servicio_favorito: masFrecuente(servicios.map((s) => s.servicio)),
+          groomer_favorito: masFrecuente(groomers),
+          primera_visita: servicios.length ? servicios[servicios.length - 1].fecha_hora : null,
+        },
+        servicios,
+      },
+    });
+  } catch (e) {
+    console.error('Hoja de vida error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+/** Edad legible a partir de la fecha de nacimiento ("3 años 2 meses"). */
+function calcularEdad(fechaNacimiento) {
+  if (!fechaNacimiento) return null;
+  const nac = new Date(fechaNacimiento);
+  if (!Number.isFinite(nac.getTime())) return null;
+  const hoy = new Date();
+  if (nac > hoy) return null;
+  let meses = (hoy.getFullYear() - nac.getFullYear()) * 12 + (hoy.getMonth() - nac.getMonth());
+  if (hoy.getDate() < nac.getDate()) meses -= 1;
+  if (meses < 0) return null;
+  const anios = Math.floor(meses / 12);
+  const resto = meses % 12;
+  if (anios === 0) return `${resto} mes${resto === 1 ? '' : 'es'}`;
+  if (resto === 0) return `${anios} año${anios === 1 ? '' : 's'}`;
+  return `${anios} año${anios === 1 ? '' : 's'} ${resto} mes${resto === 1 ? '' : 'es'}`;
+}
 
 // -------- Orígenes de cliente --------
 /** Nombre de origen válido: no vacío y máximo 80 caracteres (igual que la columna). */
