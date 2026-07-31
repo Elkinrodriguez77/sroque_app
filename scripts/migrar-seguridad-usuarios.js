@@ -26,9 +26,9 @@ async function run() {
 
   const { rowCount } = await pool.query(
     `UPDATE ${s}.usuarios
-     SET password_expires_at = NOW() + ($1 || ' days')::interval
+     SET password_expires_at = NOW() + make_interval(days => $1::int)
      WHERE password_expires_at IS NULL AND rol <> 'owner'`,
-    [String(diasGracia)]
+    [diasGracia]
   );
 
   console.log(`Columnas de seguridad listas OK.`);

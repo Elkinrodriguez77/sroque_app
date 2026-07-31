@@ -112,11 +112,11 @@ async function createUser(username, plainPassword, nombre, rol = 'user') {
   const esOwner = rol === ROL_OWNER;
   const { rows } = await pool.query(
     `INSERT INTO ${schema}.usuarios (username, password_hash, nombre, rol, password_changed_at, password_expires_at, must_change_password)
-     VALUES ($1, $2, $3, $4, NOW(), ${esOwner ? 'NULL' : `NOW() + ($5 || ' days')::interval`}, false)
+     VALUES ($1, $2, $3, $4, NOW(), ${esOwner ? 'NULL' : 'NOW() + make_interval(days => $5::int)'}, false)
      RETURNING id, username, nombre, rol, password_expires_at`,
     esOwner
       ? [username, hash, nombre || username, ROL_OWNER]
-      : [username, hash, nombre || username, 'user', String(PASSWORD_MAX_DIAS)]
+      : [username, hash, nombre || username, 'user', PASSWORD_MAX_DIAS]
   );
   return rows[0];
 }
@@ -235,12 +235,12 @@ async function changePassword(username, newPlainPassword) {
     `UPDATE ${schema}.usuarios
      SET password_hash = $2,
          password_changed_at = NOW(),
-         password_expires_at = CASE WHEN COALESCE(rol,'user') = $3 THEN NULL
-                                    ELSE NOW() + ($4 || ' days')::interval END,
+         password_expires_at = CASE WHEN COALESCE(rol,'user') = $3::text THEN NULL
+                                    ELSE NOW() + make_interval(days => $4::int) END,
          must_change_password = false
      WHERE username = $1
      RETURNING id, username, nombre, rol, password_expires_at`,
-    [username, hash, ROL_OWNER, String(PASSWORD_MAX_DIAS)]
+    [username, hash, ROL_OWNER, PASSWORD_MAX_DIAS]
   );
   return rows[0] || null;
 }
@@ -260,13 +260,16 @@ async function forcePasswordChange(username) {
 async function setUserRol(username, rol) {
   const schema = safeSchema();
   const esOwner = rol === ROL_OWNER;
+  // Al pasar a 'user' se le da un ciclo completo de vigencia desde hoy; al pasar
+  // a 'owner' la contraseña deja de caducar.
   const { rows } = await pool.query(
     `UPDATE ${schema}.usuarios
-     SET rol = $2,
-         password_expires_at = CASE WHEN $2 = $3 THEN NULL ELSE password_expires_at END
+     SET rol = $2::text,
+         password_expires_at = CASE WHEN $2::text = $3::text THEN NULL
+                                    ELSE COALESCE(password_expires_at, NOW() + make_interval(days => $4::int)) END
      WHERE username = $1
      RETURNING id, username, nombre, rol, password_expires_at`,
-    [username, esOwner ? ROL_OWNER : 'user', ROL_OWNER]
+    [username, esOwner ? ROL_OWNER : 'user', ROL_OWNER, PASSWORD_MAX_DIAS]
   );
   return rows[0] || null;
 }

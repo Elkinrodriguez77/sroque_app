@@ -49,11 +49,12 @@ async function run() {
     )`);
     await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS origenes_cliente_nombre_uniq
       ON ${s}.origenes_cliente (lower(nombre))`);
+    // ON CONFLICT se apoya en el índice único sobre lower(nombre): no duplica
+    // y evita deducir tipos ambiguos para el parámetro.
     let nuevos = 0;
     for (const nombre of ORIGENES_SEMILLA) {
       const r = await pool.query(
-        `INSERT INTO ${s}.origenes_cliente (nombre)
-         SELECT $1 WHERE NOT EXISTS (SELECT 1 FROM ${s}.origenes_cliente WHERE lower(nombre) = lower($1))`,
+        `INSERT INTO ${s}.origenes_cliente (nombre) VALUES ($1::text) ON CONFLICT DO NOTHING`,
         [nombre]
       );
       nuevos += r.rowCount;
@@ -72,9 +73,9 @@ async function run() {
     await pool.query(`ALTER TABLE ${s}.usuarios ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT false`);
     const r = await pool.query(
       `UPDATE ${s}.usuarios
-       SET password_expires_at = NOW() + ($1 || ' days')::interval
+       SET password_expires_at = NOW() + make_interval(days => $1::int)
        WHERE password_expires_at IS NULL AND rol <> 'owner'`,
-      [String(DIAS_GRACIA)]
+      [DIAS_GRACIA]
     );
     return `${r.rowCount} cuenta(s) con ${DIAS_GRACIA} día(s) de gracia`;
   });

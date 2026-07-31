@@ -24,11 +24,10 @@ async function run() {
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS origenes_cliente_nombre_uniq
     ON ${s}.origenes_cliente (lower(nombre))`);
 
+  // ON CONFLICT se apoya en el índice único sobre lower(nombre).
   for (const nombre of SEMILLA) {
     await pool.query(
-      `INSERT INTO ${s}.origenes_cliente (nombre)
-       SELECT $1
-       WHERE NOT EXISTS (SELECT 1 FROM ${s}.origenes_cliente WHERE lower(nombre) = lower($1))`,
+      `INSERT INTO ${s}.origenes_cliente (nombre) VALUES ($1::text) ON CONFLICT DO NOTHING`,
       [nombre]
     );
   }

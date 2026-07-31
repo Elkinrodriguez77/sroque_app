@@ -19,9 +19,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS origenes_cliente_nombre_uniq
 COMMENT ON TABLE prod.origenes_cliente IS 'Opciones seleccionables en el campo "Origen del cliente" del pedido. Editables desde /origenes.html.';
 
 -- Semilla con la lista que estaba fija en el código.
+-- ON CONFLICT se apoya en el índice único de arriba: no duplica al re-ejecutar.
 INSERT INTO prod.origenes_cliente (nombre)
-SELECT v.nombre
-FROM (VALUES
+VALUES
   ('WhatsApp'),
   ('Instagram'),
   ('Facebook'),
@@ -31,7 +31,4 @@ FROM (VALUES
   ('Cliente frecuente'),
   ('Paso por el local (fachada)'),
   ('Publicidad / Volante')
-) AS v(nombre)
-WHERE NOT EXISTS (
-  SELECT 1 FROM prod.origenes_cliente o WHERE lower(o.nombre) = lower(v.nombre)
-);
+ON CONFLICT DO NOTHING;
