@@ -60,6 +60,12 @@ module.exports = {
 /** Tag opcional de clasificación del cliente en el pedido. */
 const TIPOS_CLIENTE = ['Antiguo', 'Nuevo', 'VIP'];
 
+/**
+ * Toda fecha/hora de pedido se interpreta y valida en esta zona, sin importar
+ * dónde esté desplegado el servidor ni la zona del dispositivo del usuario.
+ */
+const ZONA_BOGOTA = 'America/Bogota';
+
 function toNumberOrZero(value) {
   if (value === '' || value === undefined || value === null) return 0;
   const n = Number(value);
@@ -68,12 +74,27 @@ function toNumberOrZero(value) {
 
 function sanitizePedidoInput(input) {
   const { DateTime } = require('luxon');
-  const nowBogota = DateTime.now().setZone('America/Bogota');
+  const nowBogota = DateTime.now().setZone(ZONA_BOGOTA);
   let fechaISO = nowBogota.toISO();
+  let fechaFutura = false;
+  let fechaInvalida = false;
+
   if (input.fecha_hora) {
-    const d = new Date(input.fecha_hora);
-    if (!isNaN(d.getTime()) && d.getTime() <= nowBogota.toJSDate().getTime()) {
-      fechaISO = d.toISOString();
+    const txt = String(input.fecha_hora).trim();
+    /*
+     * El campo <input type="datetime-local"> envía "2026-08-03T18:44", SIN zona.
+     * Antes se usaba `new Date(txt)`, que lo interpretaba en la zona del SERVIDOR:
+     * si el servidor cambiaba de zona (o corría en UTC), la hora quedaba corrida.
+     * Aquí se fija explícitamente Bogotá, así el resultado no depende del host.
+     */
+    const dt = DateTime.fromISO(txt, { zone: ZONA_BOGOTA });
+    if (!dt.isValid) {
+      fechaInvalida = true;
+    } else if (dt > nowBogota) {
+      // No se permiten servicios en el futuro: se avisa en vez de corregir en silencio.
+      fechaFutura = true;
+    } else {
+      fechaISO = dt.toISO();
     }
   }
 
@@ -103,6 +124,9 @@ function sanitizePedidoInput(input) {
     groomer2: input.groomer2 ? String(input.groomer2).trim() : undefined,
     origen_cliente: input.origen_cliente ? String(input.origen_cliente).trim().slice(0, 80) : undefined,
     tipo_cliente: TIPOS_CLIENTE.includes(input.tipo_cliente) ? input.tipo_cliente : undefined,
+    // Banderas internas para validatePedido (no se guardan en la base).
+    _fechaFutura: fechaFutura,
+    _fechaInvalida: fechaInvalida,
   };
 }
 
@@ -113,6 +137,12 @@ function validatePedido(pedido) {
   if (!pedido.servicio) errors.push('servicio es requerido');
   if (!pedido.piso || !pisosValidos.includes(pedido.piso)) {
     errors.push('Piso es requerido');
+  }
+  if (pedido._fechaInvalida) {
+    errors.push('La fecha y hora del servicio no es válida');
+  }
+  if (pedido._fechaFutura) {
+    errors.push('La fecha y hora del servicio no puede ser futura (hora de Bogotá)');
   }
   return errors;
 }

@@ -42,6 +42,58 @@ let ORIGENES_CLIENTE = [...ORIGENES_CLIENTE_FALLBACK, ORIGEN_OTROS];
 /** Tags de clasificación del cliente (campo opcional). Debe coincidir con src/types.js. */
 const TIPOS_CLIENTE = ['Antiguo', 'Nuevo', 'VIP'];
 
+/* ---------------------------------------------------------------------------
+ * Fechas: TODO el pedido se maneja en hora de Bogotá.
+ *
+ * El campo <input type="datetime-local"> trabaja con "hora de pared" sin zona.
+ * Antes se le escribía el valor con `toISOString()` (que es UTC), así que un
+ * pedido de las 6:44 p. m. se mostraba como 11:44 p. m. y, al guardar, se
+ * almacenaba con +5 horas. Repetir la edición seguía corriendo la hora y los
+ * pedidos de la tarde terminaban cayendo en el día siguiente, desapareciendo
+ * del dashboard de la jornada.
+ * ------------------------------------------------------------------------- */
+const ZONA_BOGOTA = 'America/Bogota';
+
+/** Partes de fecha/hora de un instante, expresadas en hora de Bogotá. */
+function partesBogota(fecha) {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: ZONA_BOGOTA,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(fecha).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+  // Algunos motores devuelven "24" para la medianoche.
+  if (partes.hour === '24') partes.hour = '00';
+  return partes;
+}
+
+/** Convierte un instante al formato que espera datetime-local, en hora de Bogotá. */
+function aDatetimeLocalBogota(valor) {
+  if (!valor) return '';
+  const d = new Date(valor);
+  if (isNaN(d.getTime())) return '';
+  const p = partesBogota(d);
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+}
+
+/** "Ahora" en Bogotá, con el formato de datetime-local (para el atributo max). */
+function ahoraDatetimeLocalBogota() {
+  return aDatetimeLocalBogota(new Date());
+}
+
+/** Muestra un instante en hora de Bogotá, sin depender de la zona del equipo. */
+function formatearFechaHoraBogota(valor, opciones) {
+  if (!valor) return '';
+  const d = new Date(valor);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString('es-CO', { timeZone: ZONA_BOGOTA, ...opciones });
+}
+
+/** Impide elegir una fecha/hora futura desde el selector del navegador. */
+function actualizarMaxFechaHora() {
+  const el = document.querySelector('#pedidoForm [name="fecha_hora"]');
+  if (el) el.max = ahoraDatetimeLocalBogota();
+}
+
 /**
  * Precios sugeridos (COP). Editar aquí para actualizar tarifas.
  * - manto_corto: pelaje "Corto"
@@ -618,10 +670,13 @@ async function submitPedido(event) {
   errorsEl.textContent = '';
 
   if (data.fecha_hora) {
-    const ahora = new Date();
-    const elegida = new Date(data.fecha_hora);
-    if (!isNaN(elegida.getTime()) && elegida.getTime() > ahora.getTime()) {
-      errorsEl.textContent = 'La fecha y hora del servicio no puede ser posterior al momento actual.';
+    /*
+     * Se comparan cadenas "YYYY-MM-DDTHH:mm" ambas en hora de Bogotá. Comparar
+     * objetos Date no serviría: el navegador interpretaría el valor del campo
+     * en la zona del equipo, y un celular con otra zona daría un falso positivo.
+     */
+    if (data.fecha_hora > ahoraDatetimeLocalBogota()) {
+      errorsEl.textContent = 'La fecha y hora del servicio no puede ser posterior al momento actual (hora de Bogotá).';
       return;
     }
   }
@@ -829,7 +884,7 @@ async function buscarPedidos() {
 
       const header = document.createElement('div');
       header.className = 'pedido-item-header';
-      const hora = p.fecha_hora ? new Date(p.fecha_hora).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '';
+      const hora = p.fecha_hora ? new Date(p.fecha_hora).toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit' }) : '';
       const left = document.createElement('span');
       left.textContent = `${hora} · ${p.servicio || 'Sin servicio'}`;
       const right = document.createElement('span');
@@ -893,7 +948,8 @@ async function cargarPedidoEnFormulario(p) {
   form.elements['id'].value = p.id;
   form.elements['telefono_propietario'].value = p.telefono_propietario || '';
   form.elements['telefono_acudiente'].value = p.telefono_acudiente || '';
-  form.elements['fecha_hora'].value = p.fecha_hora ? new Date(p.fecha_hora).toISOString().slice(0, 16) : '';
+  // Hora de Bogotá (NO toISOString(), que es UTC y corría el pedido +5 horas).
+  form.elements['fecha_hora'].value = aDatetimeLocalBogota(p.fecha_hora);
   form.elements['piso'].value = p.piso || '';
   document.getElementById('nombreMascota').value = p.nombre_mascota || '';
   setRazaValue(p.raza || '');
@@ -1026,7 +1082,7 @@ function pedirMotivoEliminacion(p) {
     const chips = document.querySelectorAll('#motivoChips .motivo-chip');
 
     const fecha = p.fecha_hora
-      ? new Date(p.fecha_hora).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      ? new Date(p.fecha_hora).toLocaleString('es-CO', { timeZone: 'America/Bogota', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
       : '';
     detalle.textContent = `${p.nombre_mascota || 'Sin mascota'} · ${p.servicio || 'Sin servicio'}`
       + `${fecha ? ` · ${fecha}` : ''}${p.piso ? ` · ${p.piso}` : ''}`;
@@ -1303,6 +1359,11 @@ function init() {
     syncAllPedidoConstraints();
     pisoSel.addEventListener('change', syncPisoRequiredValidity);
   }
+
+  // El selector nativo no deja elegir más allá de "ahora" (hora de Bogotá).
+  // Se refresca cada minuto para que el tope siga siendo válido en turnos largos.
+  actualizarMaxFechaHora();
+  setInterval(actualizarMaxFechaHora, 60 * 1000);
   document.getElementById('pedidoForm').elements['precio'].addEventListener('input', updateMoney);
   document.getElementById('pedidoForm').elements['adicionales_descuentos'].addEventListener('input', updateMoney);
   const telPropietario = document.getElementById('pedidoForm').elements['telefono_propietario'];

@@ -156,7 +156,7 @@ async function consultarIngresos() {
 
       const tr = document.createElement('tr');
       const fechaHora = r.fecha_hora
-        ? new Date(r.fecha_hora).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        ? new Date(r.fecha_hora).toLocaleString('es-CO', { timeZone: 'America/Bogota', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
         : '';
       const groomers = [r.groomer1, r.groomer2].filter(Boolean).join(', ');
       tr.innerHTML = `

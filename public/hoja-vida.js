@@ -46,7 +46,7 @@ function fechaHora(v) {
   if (!v) return '-';
   const d = new Date(v);
   if (isNaN(d.getTime())) return '-';
-  return d.toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString('es-CO', { timeZone: 'America/Bogota', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 /** Fecha suelta tipo DATE (sin hora): evita el corrimiento por zona horaria. */

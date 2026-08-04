@@ -184,7 +184,7 @@ async function seleccionarSistema(mascota) {
 
     pedidos.forEach((p) => {
       const fechaHora = p.fecha_hora
-        ? new Date(p.fecha_hora).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        ? new Date(p.fecha_hora).toLocaleString('es-CO', { timeZone: 'America/Bogota', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
         : '-';
       appendServicioRow(serviciosBody, {
         fecha: fechaHora,
