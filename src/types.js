@@ -135,6 +135,7 @@ function validatePedido(pedido) {
   const pisosValidos = ['Piso 1', 'Piso 2'];
   if (!pedido.telefono_propietario) errors.push('telefono_propietario es requerido');
   if (!pedido.servicio) errors.push('servicio es requerido');
+  if (!pedido.raza) errors.push('La raza de la mascota es requerida');
   if (!pedido.piso || !pisosValidos.includes(pedido.piso)) {
     errors.push('Piso es requerido');
   }

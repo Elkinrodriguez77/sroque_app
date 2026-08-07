@@ -94,6 +94,47 @@ function actualizarMaxFechaHora() {
   if (el) el.max = ahoraDatetimeLocalBogota();
 }
 
+/* ---------------------------------------------------------------------------
+ * Retroalimentación de las acciones.
+ *
+ * El formulario es largo: el mensaje de error quedaba al final, junto al botón
+ * Guardar, y quien estuviera viendo la parte de arriba no lo notaba. Creía que
+ * había guardado y reportaba que "el pedido desapareció". Ahora, cuando algo
+ * impide guardar, se avisa con un toast, se lleva la vista al campo culpable
+ * y se resalta; y cuando la acción sí ocurre, también se confirma.
+ * ------------------------------------------------------------------------- */
+
+/** Elemento a resaltar: el contenedor visible del campo (label o wrapper). */
+function contenedorResaltable(el) {
+  return el.closest('label') || el.closest('.searchable-select') || el;
+}
+
+/**
+ * Rechaza la acción: muestra el aviso, lleva la vista al campo y lo resalta.
+ * Devuelve false para poder hacer `return rechazar(...)`.
+ */
+function rechazar(mensaje, campo, detalle) {
+  const errorsEl = document.getElementById('pedidoErrors');
+  if (errorsEl) errorsEl.textContent = mensaje;
+  window.Toast?.error(mensaje, detalle);
+
+  const el = typeof campo === 'string' ? document.querySelector(campo) : campo;
+  if (el) {
+    const caja = contenedorResaltable(el);
+    caja.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    caja.classList.add('campo-invalido');
+    setTimeout(() => caja.classList.remove('campo-invalido'), 2600);
+    // preventScroll: el desplazamiento suave de arriba ya se encarga.
+    try { el.focus({ preventScroll: true }); } catch { /* navegadores viejos */ }
+  }
+  return false;
+}
+
+/** Resumen corto del pedido para acompañar el aviso de confirmación. */
+function resumenPedido(data) {
+  return [data.nombre_mascota, data.servicio].filter(Boolean).join(' · ');
+}
+
 /**
  * Precios sugeridos (COP). Editar aquí para actualizar tarifas.
  * - manto_corto: pelaje "Corto"
@@ -662,7 +703,13 @@ async function submitPedido(event) {
   event.preventDefault();
   const form = event.currentTarget;
   syncAllPedidoConstraints();
-  if (!form.reportValidity()) return;
+  if (!form.reportValidity()) {
+    // El navegador enfoca el campo, pero en un formulario tan largo su globo
+    // puede quedar fuera de pantalla: lo acercamos y lo resaltamos.
+    const invalido = form.querySelector(':invalid');
+    if (invalido) rechazar('Faltan datos obligatorios para guardar el pedido.', invalido);
+    return;
+  }
   const fotoInput = document.getElementById('mascotaFotoInput');
   const fotoFile = fotoInput.files && fotoInput.files[0] ? fotoInput.files[0] : null;
   const data = Object.fromEntries(new FormData(form).entries());
@@ -676,14 +723,15 @@ async function submitPedido(event) {
      * en la zona del equipo, y un celular con otra zona daría un falso positivo.
      */
     if (data.fecha_hora > ahoraDatetimeLocalBogota()) {
-      errorsEl.textContent = 'La fecha y hora del servicio no puede ser posterior al momento actual (hora de Bogotá).';
+      rechazar('La fecha y hora no puede ser futura.', '#pedidoForm [name="fecha_hora"]',
+        'Debe ser igual o anterior al momento actual (hora de Bogotá).');
       return;
     }
   }
 
   const groomerErr = validateGroomers();
   if (groomerErr) {
-    errorsEl.textContent = groomerErr;
+    rechazar(groomerErr, '#groomer2Search');
     return;
   }
 
@@ -692,17 +740,22 @@ async function submitPedido(event) {
   }
   delete data.servicio_otro;
 
+  if (!(data.raza || '').trim()) {
+    rechazar('Falta la raza de la mascota.', '#razaSearch',
+      'Escribe o selecciona la raza: es un campo obligatorio.');
+    return;
+  }
+
   // Origen del cliente: obligatorio. Si eligió "Otros", guardar el texto libre escrito.
   if (!(data.origen_cliente || '').trim()) {
-    errorsEl.textContent = 'Selecciona el origen del cliente (¿cómo nos conoció?).';
-    document.getElementById('origenSearch')?.focus();
+    rechazar('Falta el origen del cliente.', '#origenSearch', '¿Cómo nos conoció? Es un campo obligatorio.');
     return;
   }
   if (data.origen_cliente === ORIGEN_OTROS) {
     const otro = (data.origen_cliente_otro || '').trim();
     if (!otro) {
-      errorsEl.textContent = 'Seleccionaste "Otros" en Origen del cliente: escribe cuál.';
-      document.querySelector('#pedidoForm [name="origen_cliente_otro"]')?.focus();
+      rechazar('Escribe cuál es el origen.', '#pedidoForm [name="origen_cliente_otro"]',
+        'Seleccionaste "Otros": indica el canal.');
       return;
     }
     data.origen_cliente = otro;
@@ -717,11 +770,11 @@ async function submitPedido(event) {
     const mp1 = document.getElementById('mixtoPago1').value;
     const mp2 = document.getElementById('mixtoPago2').value;
     if (!mp1 || !mp2) {
-      errorsEl.textContent = 'Para pago Mixto, seleccione ambos métodos de pago.';
+      rechazar('Para pago Mixto debes elegir los dos métodos.', '#mixtoPago1');
       return;
     }
     if (mp1 === mp2) {
-      errorsEl.textContent = 'Los dos métodos de pago Mixto no pueden ser iguales.';
+      rechazar('Los dos métodos de pago Mixto no pueden ser iguales.', '#mixtoPago2');
       return;
     }
     data.metodo_pago = 'Mixto';
@@ -747,9 +800,16 @@ async function submitPedido(event) {
     });
     const body = await resp.json().catch(() => ({}));
     if (!resp.ok) {
-      errorsEl.textContent = (body?.errors?.join(', ')) || 'Error al guardar pedido';
+      const detalle = (body?.errors?.join(' · ')) || 'El servidor rechazó el pedido.';
+      errorsEl.textContent = detalle;
+      window.Toast?.error(id ? 'No se pudo actualizar el pedido' : 'No se pudo guardar el pedido', detalle);
       return;
     }
+
+    window.Toast?.exito(
+      id ? 'Pedido actualizado correctamente' : 'Pedido guardado correctamente',
+      resumenPedido(data)
+    );
 
     const keepTel = data.telefono_propietario || '';
     const keepAcud = data.telefono_acudiente || '';
@@ -777,21 +837,41 @@ async function submitPedido(event) {
         const up = await fetch(`/api/mascotas/${mascotaIdParaFoto}/foto`, { method: 'POST', body: fd });
         const upBody = await up.json().catch(() => ({}));
         if (!up.ok || !upBody.ok) {
-          errorsEl.textContent = `Pedido guardado. La foto no se subió: ${(upBody.errors && upBody.errors.join(', ')) || 'error'}`;
+          const detalle = (upBody.errors && upBody.errors.join(', ')) || 'error desconocido';
+          errorsEl.textContent = `Pedido guardado. La foto no se subió: ${detalle}`;
+          window.Toast?.error('El pedido se guardó, pero la foto no se subió', detalle);
         }
       } catch {
         errorsEl.textContent = 'Pedido guardado. Error de red al subir la foto; podés intentar de nuevo en el próximo pedido.';
+        window.Toast?.error('El pedido se guardó, pero la foto no se subió', 'Error de red al subir la imagen.');
       }
     }
 
+    /*
+     * El selector de mascota queda en "Nueva mascota / sin seleccionar".
+     *
+     * Antes se volvía a seleccionar la mascota recién facturada. Cuando un
+     * cliente traía dos mascotas el mismo día, al registrar la segunda el
+     * formulario seguía apuntando a la primera: si tocaban el desplegable se
+     * copiaban nombre, raza, tamaño y pelaje de la anterior, y si no lo tocaban
+     * el segundo pedido quedaba vinculado a la mascota equivocada en la base.
+     * Dejarlo sin selección obliga a elegir a conciencia y hace que el caso de
+     * varias mascotas por cliente funcione igual que el de una sola.
+     */
     await cargarMascotasPorTelefono();
-    if (mascotaIdParaFoto) {
-      document.getElementById('mascotaSelect').value = String(mascotaIdParaFoto);
-    }
+    const selMascota = document.getElementById('mascotaSelect');
+    if (selMascota) selMascota.value = '';
+    document.getElementById('nombreMascota').value = '';
+    document.getElementById('tipoMascotaSelect').value = '';
+    document.getElementById('tamanoSelect').value = '';
+    document.getElementById('pelajeSelect').value = '';
     fotoInput.value = '';
     refreshMascotaFotoPreview();
+    syncAllPedidoConstraints();
   } catch {
     errorsEl.textContent = 'Error de red al guardar pedido';
+    window.Toast?.error('No se pudo guardar el pedido',
+      'Sin conexión con el servidor. Revisa la red y vuelve a intentarlo: el pedido NO quedó registrado.');
   }
 }
 
@@ -1181,8 +1261,12 @@ async function eliminarPedido(p) {
     }
     await buscarPedidos();
     msg.innerHTML = '<span style="color:#34d399">Pedido eliminado.</span>';
+    window.Toast?.exito('Pedido eliminado correctamente',
+      [p.nombre_mascota, p.servicio].filter(Boolean).join(' · '));
   } catch {
     msg.innerHTML = '<span style="color:#f87171">Error de red al eliminar</span>';
+    window.Toast?.error('No se pudo eliminar el pedido',
+      'Sin conexión con el servidor. El pedido sigue registrado.');
   }
 }
 
@@ -1194,15 +1278,22 @@ async function cerrarPedido(id) {
     const resp = await fetch(`/api/pedidos/${id}/cerrar`, { method: 'POST' });
     const body = await resp.json().catch(() => ({}));
     if (!resp.ok || !body.ok) {
-      msg.innerHTML = `<span style="color:#f87171">${(body?.errors?.join(', ')) || 'No se pudo cerrar el pedido'}</span>`;
+      const detalle = (body?.errors?.join(', ')) || 'El servidor rechazó el cierre.';
+      msg.innerHTML = `<span style="color:#f87171">${detalle}</span>`;
+      window.Toast?.error('No se pudo cerrar el pedido', detalle);
       return;
     }
+    window.Toast?.exito('Pedido cerrado correctamente', 'Ya cuenta para el cierre de caja del día.');
     await buscarPedidos();
     const form = document.getElementById('pedidoForm');
     form.reset();
     setRazaValue('');
     setOrigenValue('');
     setTipoClienteValue('');
+    // Igual que tras guardar: sin mascota preseleccionada, para no arrastrar
+    // los datos de este pedido al siguiente del mismo cliente.
+    const selMascota = document.getElementById('mascotaSelect');
+    if (selMascota) selMascota.value = '';
     syncAllPedidoConstraints();
     updateMoney();
     document.getElementById('precioSugerido').hidden = true;
@@ -1211,6 +1302,8 @@ async function cerrarPedido(id) {
     document.querySelectorAll('.pedido-item.selected').forEach((n) => n.classList.remove('selected'));
   } catch {
     msg.innerHTML = '<span style="color:#f87171">Error de red al cerrar pedido</span>';
+    window.Toast?.error('No se pudo cerrar el pedido',
+      'Sin conexión con el servidor. El pedido sigue abierto.');
   }
 }
 
@@ -1287,10 +1380,16 @@ function syncServicioRequiredValidity() {
   el.setCustomValidity(el.value.trim() ? '' : 'Selecciona un servicio.');
 }
 
+/**
+ * Raza es obligatoria. El valor viaja en un input hidden, pero los hidden están
+ * excluidos de la validación nativa (su `required` no hace nada), así que el
+ * mensaje se cuelga del input de búsqueda visible, igual que en Origen.
+ */
 function syncRazaRequiredValidity() {
-  const h = document.getElementById('razaValue');
-  if (!h) return;
-  h.setCustomValidity((h.value || '').trim() ? '' : 'Indica la raza.');
+  const hidden = document.getElementById('razaValue');
+  const search = document.getElementById('razaSearch');
+  if (!hidden || !search) return;
+  search.setCustomValidity((hidden.value || '').trim() ? '' : 'Indica la raza de la mascota.');
 }
 
 /**

@@ -193,7 +193,10 @@
             <label>Raza *
               <div class="searchable-select" id="razaWrapper">
                 <input type="text" id="razaSearch" class="searchable-input" placeholder="Escribe para buscar raza..." autocomplete="off" aria-required="true" />
-                <input type="hidden" name="raza" id="razaValue" required />
+                <!-- El valor real viaja en este hidden; la validación se hace sobre
+                     el input visible de arriba, porque los input hidden están
+                     excluidos de la validación nativa del navegador. -->
+                <input type="hidden" name="raza" id="razaValue" />
                 <div class="searchable-dropdown" id="razaDropdown"></div>
               </div>
             </label>
@@ -423,7 +426,7 @@
   </div>
 
   <script src="/sidebar.js" defer></script>
-
+  <script src="/toast.js" defer></script>
   <script src="/buscar-mascota.js" defer></script>
   <script src="/pedido.js" defer></script>
 </body>
