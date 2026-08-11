@@ -111,6 +111,19 @@ async function run() {
       ON ${s}.pedidos_eliminados (origen_eliminacion)`);
   });
 
+  await paso('Tabla de sesiones (sobreviven a los reinicios)', async () => {
+    // Estructura que espera connect-pg-simple.
+    await pool.query(`CREATE TABLE IF NOT EXISTS ${s}.sesiones (
+      sid VARCHAR NOT NULL COLLATE "default",
+      sess JSON NOT NULL,
+      expire TIMESTAMP(6) NOT NULL,
+      CONSTRAINT sesiones_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE
+    )`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS sesiones_expire_idx ON ${s}.sesiones (expire)`);
+    const { rows } = await pool.query(`SELECT COUNT(*)::int AS n FROM ${s}.sesiones`);
+    return `${rows[0].n} sesión(es) activa(s)`;
+  });
+
   console.log('\n✓ Migraciones aplicadas.\n');
 
   const { rows } = await pool.query(

@@ -27,7 +27,14 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       return;
     }
     // Contraseña caducada u obligada a cambiar: va directo a definir una nueva.
-    window.location.href = body.mustChangePassword ? '/cambiar-password.html' : '/';
+    if (body.mustChangePassword) {
+      window.location.href = '/cambiar-password.html';
+      return;
+    }
+    // Si la sesión se cayó estando en otra pantalla, se regresa a ella.
+    const volver = new URLSearchParams(window.location.search).get('volver');
+    const destinoSeguro = volver && volver.startsWith('/') && !volver.startsWith('//') ? volver : '/';
+    window.location.href = destinoSeguro;
   } catch {
     errEl.textContent = 'Error de red. Intente de nuevo.';
   }

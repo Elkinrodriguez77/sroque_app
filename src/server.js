@@ -21,7 +21,15 @@ const {
   getAllOrigenes, getActiveOrigenes, insertOrigen, updateOrigen, toggleOrigenActivo, deleteOrigen,
   getHojaVidaMascota, getResumenMascotasPorTelefono, getResumenMascotasPorNombre,
   getPedidosEliminados,
+  pool: dbPool,
 } = require('./db');
+
+/** Esquema validado, para el almacén de sesiones. */
+function safeSchema() {
+  const schema = (process.env.PGSCHEMA || 'prod').toString();
+  if (!/^[_a-zA-Z][_a-zA-Z0-9]*$/.test(schema)) throw new Error('Nombre de esquema inválido');
+  return schema;
+}
 const { sanitizeClienteInput, validateCliente, sanitizePedidoInput, validatePedido, sanitizeGastoInput, validateGasto } = require('./types');
 const {
   findUserByUsername, verifyPassword, requireAuth, loginRateLimiter, recordFailedAttempt, clearAttempts,
@@ -51,12 +59,34 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.set('trust proxy', 1);
+/*
+ * Sesiones en PostgreSQL, no en memoria.
+ *
+ * Con el almacén por defecto (MemoryStore) las sesiones viven en la RAM del
+ * proceso: cada despliegue o reinicio de Render las borraba todas y la gente
+ * se topaba con "No autenticado" a mitad de un formulario ya diligenciado.
+ * Guardándolas en la base sobreviven a los reinicios, y de paso se dejan de
+ * acumular en memoria.
+ *
+ * createTableIfMissing crea la tabla sola la primera vez; `npm run migrar`
+ * también la deja lista, para no depender del arranque.
+ */
+const PgSession = require('connect-pg-simple')(session);
 app.use(session({
+  store: new PgSession({
+    pool: dbPool,
+    schemaName: safeSchema(),
+    tableName: 'sesiones',
+    createTableIfMissing: true,
+    // Limpia las sesiones vencidas cada 30 minutos.
+    pruneSessionInterval: 30 * 60,
+  }),
   secret: process.env.SESSION_SECRET || 'sanroque-secret-key-change-me',
   resave: false,
   saveUninitialized: false,
+  // 12 horas: cubre un turno completo del spa sin quedarse corto.
   cookie: {
-    maxAge: 8 * 60 * 60 * 1000,
+    maxAge: 12 * 60 * 60 * 1000,
     httpOnly: true,
     sameSite: 'lax',
   },
