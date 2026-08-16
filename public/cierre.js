@@ -15,6 +15,13 @@ document.getElementById('btnLogout')?.addEventListener('click', async () => {
 
 const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 
+/** Escapa texto que venga de la base antes de insertarlo como HTML. */
+function esc(s) {
+  const div = document.createElement('div');
+  div.textContent = s == null ? '' : s;
+  return div.innerHTML;
+}
+
 const METODO_EFECTIVO = 'Efectivo';
 /** Debe coincidir con las opciones de método de pago (boutique, pedidos, gastos). */
 const METODO_DATAFONO = 'Datáfono';
@@ -165,17 +172,20 @@ async function consultarCierre() {
   const pisoQ = piso ? `&piso=${encodeURIComponent(piso)}` : '';
 
   try {
-    const [resSpa, resBoutique, resGastos, resInicio] = await Promise.all([
+    const [resSpa, resBoutique, resGastos, resInicio, resAbiertos] = await Promise.all([
       fetch(`/api/dashboard/pedidos?desde=${desde}&hasta=${hasta}&estado=cerrados${pisoQ}`),
       fetch(`/api/boutique?desde=${desde}&hasta=${hasta}${pisoQ}`),
       fetch(`/api/gastos?desde=${desde}&hasta=${hasta}${pisoQ}`),
       fetch(`/api/cierre/inicio-caja?antes=${desde}${pisoQ}`),
+      // Los abiertos NO entran al cierre; se consultan solo para poder avisar.
+      fetch(`/api/dashboard/pedidos?desde=${desde}&hasta=${hasta}&estado=abiertos${pisoQ}`),
     ]);
 
     const dataSpa = await resSpa.json();
     const dataBoutique = await resBoutique.json();
     const dataGastos = await resGastos.json();
     const dataInicio = await resInicio.json();
+    const dataAbiertos = await resAbiertos.json().catch(() => ({ ok: false }));
 
     if (!dataSpa.ok || !dataBoutique.ok || !dataGastos.ok || !dataInicio.ok) {
       msg.textContent = 'Error al consultar datos.';
@@ -189,10 +199,100 @@ async function consultarCierre() {
       hasta,
       piso,
     });
+
+    // Después de pintar el reporte, para que la alerta quede encima de él.
+    revisarPedidosAbiertos(dataAbiertos.ok ? (dataAbiertos.data || []) : []);
   } catch {
     msg.textContent = 'Error de red al consultar.';
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Aviso de pedidos sin cerrar.
+ *
+ * Varias usuarias asumen que "Guardar pedido" ya lo deja cerrado. No es así: el
+ * cierre de caja solo cuenta los pedidos CERRADOS, de modo que un servicio
+ * guardado pero abierto queda por fuera de los totales y la caja no cuadra.
+ * Aquí se avisa de forma imposible de pasar por alto.
+ * ------------------------------------------------------------------------- */
+let pedidosAbiertosActuales = [];
+
+function revisarPedidosAbiertos(abiertos) {
+  pedidosAbiertosActuales = abiertos || [];
+  const banner = document.getElementById('abiertosBanner');
+  const n = pedidosAbiertosActuales.length;
+
+  if (n === 0) {
+    if (banner) banner.hidden = true;
+    return;
+  }
+
+  const total = pedidosAbiertosActuales
+    .reduce((acc, p) => acc + Number(p.precio_final || 0), 0);
+  const plural = n === 1 ? '' : 's';
+
+  if (banner) {
+    document.getElementById('abiertosBannerTitulo').textContent =
+      `${n} pedido${plural} sin cerrar por ${fmt.format(total)}`;
+    banner.hidden = false;
+  }
+
+  abrirModalAbiertos();
+}
+
+function abrirModalAbiertos() {
+  const modal = document.getElementById('abiertosModal');
+  if (!modal) return;
+  const n = pedidosAbiertosActuales.length;
+  const total = pedidosAbiertosActuales.reduce((acc, p) => acc + Number(p.precio_final || 0), 0);
+  const plural = n === 1 ? '' : 's';
+
+  document.getElementById('abiertosSubtitulo').textContent =
+    `${n} servicio${plural} guardado${plural} pero sin cerrar en el periodo consultado.`;
+
+  const body = document.getElementById('abiertosBody');
+  body.innerHTML = '';
+  for (const p of pedidosAbiertosActuales) {
+    const hora = p.fecha_hora
+      ? new Date(p.fecha_hora).toLocaleString('es-CO', {
+          timeZone: 'America/Bogota', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+        })
+      : '-';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${esc(hora)}</td>
+      <td>${esc(p.nombre_mascota || '-')}</td>
+      <td>${esc(p.servicio || '-')}</td>
+      <td>${esc(p.piso || '-')}</td>
+      <td><strong>${esc(fmt.format(Number(p.precio_final || 0)))}</strong></td>
+    `;
+    body.appendChild(tr);
+  }
+
+  document.getElementById('abiertosTotal').textContent =
+    `Dinero que NO está entrando al cierre: ${fmt.format(total)}`;
+
+  modal.hidden = false;
+  document.body.classList.add('modal-abierto');
+  document.getElementById('abiertosCerrar')?.focus();
+}
+
+function cerrarModalAbiertos() {
+  const modal = document.getElementById('abiertosModal');
+  if (!modal) return;
+  modal.hidden = true;
+  document.body.classList.remove('modal-abierto');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('abiertosCerrar')?.addEventListener('click', cerrarModalAbiertos);
+  document.getElementById('abiertosBackdrop')?.addEventListener('click', cerrarModalAbiertos);
+  document.getElementById('abiertosBannerVer')?.addEventListener('click', abrirModalAbiertos);
+  document.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('abiertosModal');
+    if (e.key === 'Escape' && modal && !modal.hidden) cerrarModalAbiertos();
+  });
+});
 
 function renderBoutiqueList(rows) {
   const list = document.getElementById('boutiqueList');

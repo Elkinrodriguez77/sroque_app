@@ -2661,3 +2661,196 @@ body { max-width: 100%; overflow-x: clip; }
 @media (prefers-reduced-motion: reduce) {
   .campo-invalido { animation: none; }
 }
+
+/* ============================================================
+   Alerta de pedidos sin cerrar (cierre de caja)
+   ============================================================ */
+.abiertos-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border-radius: 13px;
+  border: 1px solid rgba(251, 146, 60, 0.5);
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.14) 0%, rgba(120, 53, 15, 0.18) 100%);
+  animation: abiertos-latido 2.4s ease-in-out infinite;
+}
+.abiertos-banner-icono {
+  flex-shrink: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #fb923c;
+}
+.abiertos-banner-texto {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.abiertos-banner-texto strong {
+  font-size: 0.95rem;
+  color: #fdba74;
+  font-weight: 800;
+}
+.abiertos-banner-texto span {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+.abiertos-banner-texto b { color: #fdba74; }
+.abiertos-banner-btn {
+  flex-shrink: 0;
+  padding: 9px 16px;
+  border-radius: 9px;
+  border: 1px solid rgba(251, 146, 60, 0.6);
+  background: rgba(251, 146, 60, 0.16);
+  color: #fdba74;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.abiertos-banner-btn:hover { background: rgba(251, 146, 60, 0.28); color: #fff; }
+@keyframes abiertos-latido {
+  0%, 100% { border-color: rgba(251, 146, 60, 0.5); }
+  50% { border-color: rgba(251, 146, 60, 0.95); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .abiertos-banner { animation: none; }
+}
+
+/* ---- Modal de alerta ---- */
+.alerta-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.alerta-modal[hidden] { display: none; }
+.alerta-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.82);
+  backdrop-filter: blur(3px);
+}
+.alerta-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  border-radius: 18px;
+  border: 1px solid rgba(251, 146, 60, 0.45);
+  background: linear-gradient(150deg, #1e2334 0%, #161c2b 100%);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65), 0 0 60px rgba(251, 146, 60, 0.12);
+  animation: alerta-entra 0.28s cubic-bezier(0.21, 1.02, 0.73, 1);
+}
+@keyframes alerta-entra {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alerta-modal-card { animation: none; }
+}
+.alerta-modal-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.alerta-modal-icono {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(251, 146, 60, 0.16);
+  border: 1px solid rgba(251, 146, 60, 0.4);
+  color: #fb923c;
+}
+.alerta-modal-icono svg { width: 24px; height: 24px; }
+.alerta-modal-titulo {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1.2;
+}
+.alerta-modal-sub {
+  margin: 4px 0 0;
+  font-size: 0.86rem;
+  color: #94a3b8;
+}
+.alerta-modal-aviso {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: #e2e8f0;
+  background: rgba(251, 146, 60, 0.1);
+  border: 1px solid rgba(251, 146, 60, 0.28);
+}
+.alerta-modal-aviso strong { color: #fdba74; }
+.alerta-modal-aviso b { color: #fdba74; }
+.alerta-lista-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  border: 1px solid #334155;
+  border-radius: 10px;
+}
+.alerta-tabla { width: 100%; font-size: 0.82rem; margin: 0; }
+.alerta-tabla thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #1e293b;
+}
+.alerta-total {
+  margin: 12px 0 0;
+  text-align: right;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #fdba74;
+}
+.alerta-modal-acciones {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+.alerta-modal-acciones button,
+.alerta-modal-acciones .alerta-btn-ir { margin: 0; }
+.alerta-btn-ir {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 22px;
+  border-radius: 9px;
+  text-decoration: none;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 0.87rem;
+  font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  .abiertos-banner { flex-wrap: wrap; }
+  .abiertos-banner-btn { width: 100%; }
+  .alerta-modal { padding: 10px; align-items: flex-end; }
+  .alerta-modal-card { max-width: none; padding: 18px; }
+  .alerta-modal-titulo { font-size: 1.08rem; }
+  .alerta-modal-acciones { flex-direction: column-reverse; }
+  .alerta-modal-acciones button,
+  .alerta-modal-acciones .alerta-btn-ir { width: 100%; }
+}
