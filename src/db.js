@@ -842,6 +842,103 @@ async function getResumenMascotasPorNombre(nombre) {
   return rows;
 }
 
+// ----- Exportación de datos -----
+/*
+ * Las fechas se entregan ya formateadas como TEXTO en hora de Bogotá. Si se
+ * exportara el timestamp crudo, Excel lo interpretaría en la zona del equipo y
+ * volveríamos a ver el desfase de horas que costó corregir.
+ */
+const FECHA_BOGOTA = (col) => `to_char(${col} AT TIME ZONE 'America/Bogota', 'YYYY-MM-DD HH24:MI')`;
+
+/** Pedidos de un rango de fechas (por día de Bogotá), para exportar. */
+async function exportarPedidos(desde, hasta) {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { rows } = await pool.query(
+    `SELECT p.id,
+            ${FECHA_BOGOTA('p.fecha_hora')} AS fecha_hora,
+            (p.fecha_hora AT TIME ZONE 'America/Bogota')::date::text AS fecha,
+            p.piso,
+            p.telefono_propietario,
+            p.telefono_acudiente,
+            c.nombre_propietario,
+            p.nombre_mascota,
+            p.raza,
+            p.tamano,
+            p.pelaje,
+            p.servicio,
+            p.precio,
+            p.adicionales_descuentos,
+            (COALESCE(p.precio,0) + COALESCE(p.adicionales_descuentos,0)) AS precio_final,
+            p.metodo_pago, p.metodo_pago_1, p.metodo_pago_2, p.monto_pago_1, p.monto_pago_2,
+            p.groomer1, p.groomer2,
+            p.origen_cliente, p.tipo_cliente,
+            CASE WHEN COALESCE(p.cerrado, false) THEN 'Cerrado' ELSE 'Abierto' END AS estado,
+            p.mascota_id
+     FROM ${schema}.pedidos p
+     LEFT JOIN ${schema}.clientes c ON c.telefono_propietario = p.telefono_propietario
+     WHERE (p.fecha_hora AT TIME ZONE 'America/Bogota')::date >= $1::date
+       AND (p.fecha_hora AT TIME ZONE 'America/Bogota')::date <= $2::date
+     ORDER BY p.fecha_hora`,
+    [desde, hasta]
+  );
+  return rows;
+}
+
+/**
+ * Pedidos eliminados de un rango.
+ * @param {'servicio'|'eliminacion'} porFecha Campo sobre el que se filtra:
+ *   la fecha en que se prestó el servicio, o la fecha en que se borró.
+ */
+async function exportarPedidosEliminados(desde, hasta, porFecha = 'eliminacion') {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const columnaFiltro = porFecha === 'servicio' ? 'e.fecha_hora' : 'e.eliminado_at';
+  const { rows } = await pool.query(
+    `SELECT e.id,
+            e.pedido_id,
+            ${FECHA_BOGOTA('e.eliminado_at')} AS eliminado_el,
+            e.eliminado_por,
+            e.origen_eliminacion,
+            e.motivo,
+            ${FECHA_BOGOTA('e.fecha_hora')} AS fecha_hora_servicio,
+            e.piso,
+            e.telefono_propietario,
+            e.nombre_mascota,
+            e.raza,
+            e.servicio,
+            e.groomer1, e.groomer2,
+            e.precio, e.adicionales_descuentos, e.precio_final,
+            e.metodo_pago,
+            CASE WHEN e.cerrado THEN 'Estaba cerrado' ELSE 'Estaba abierto' END AS estado_al_borrar
+     FROM ${schema}.pedidos_eliminados e
+     WHERE (${columnaFiltro} AT TIME ZONE 'America/Bogota')::date >= $1::date
+       AND (${columnaFiltro} AT TIME ZONE 'America/Bogota')::date <= $2::date
+     ORDER BY e.eliminado_at DESC`,
+    [desde, hasta]
+  );
+  return rows;
+}
+
+/** Cuántas filas devolvería cada exportación, para avisar antes de descargar. */
+async function contarExportacion(desde, hasta, porFecha = 'eliminacion') {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const columnaFiltro = porFecha === 'servicio' ? 'fecha_hora' : 'eliminado_at';
+  const { rows } = await pool.query(
+    `SELECT
+       (SELECT COUNT(*) FROM ${schema}.pedidos
+        WHERE (fecha_hora AT TIME ZONE 'America/Bogota')::date BETWEEN $1::date AND $2::date)::int AS pedidos,
+       (SELECT COUNT(*) FROM ${schema}.pedidos
+        WHERE (fecha_hora AT TIME ZONE 'America/Bogota')::date BETWEEN $1::date AND $2::date
+          AND COALESCE(cerrado,false) = false)::int AS pedidos_abiertos,
+       (SELECT COALESCE(SUM(COALESCE(precio,0) + COALESCE(adicionales_descuentos,0)), 0) FROM ${schema}.pedidos
+        WHERE (fecha_hora AT TIME ZONE 'America/Bogota')::date BETWEEN $1::date AND $2::date
+          AND COALESCE(cerrado,false) = true)::numeric AS total_cerrados,
+       (SELECT COUNT(*) FROM ${schema}.pedidos_eliminados
+        WHERE (${columnaFiltro} AT TIME ZONE 'America/Bogota')::date BETWEEN $1::date AND $2::date)::int AS eliminados`,
+    [desde, hasta]
+  );
+  return rows[0];
+}
+
 // ----- Gastos -----
 async function insertGasto(gasto) {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
@@ -1056,6 +1153,7 @@ module.exports = {
   getAllOrigenes, getActiveOrigenes, insertOrigen, updateOrigen, toggleOrigenActivo, deleteOrigen,
   getHojaVidaMascota, getResumenMascotasPorTelefono, getResumenMascotasPorNombre,
   getPedidosEliminados,
+  exportarPedidos, exportarPedidosEliminados, contarExportacion,
 };
 
 

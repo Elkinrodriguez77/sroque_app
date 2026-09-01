@@ -64,6 +64,30 @@
   });
 })();
 
+/** Agrega "Exportar datos" al menú, justo antes de "Acerca de". */
+function agregarEnlaceExportar() {
+  const lista = document.querySelector('.sidebar-list');
+  if (!lista || lista.querySelector('a[href="/exportar.html"]')) return;
+
+  const li = document.createElement('li');
+  li.innerHTML = `
+    <a href="/exportar.html" class="sidebar-link">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+      <span class="sidebar-label">Exportar datos</span>
+    </a>`;
+
+  const acerca = lista.querySelector('a[href="/acerca.html"]');
+  if (acerca && acerca.closest('li')) lista.insertBefore(li, acerca.closest('li'));
+  else lista.appendChild(li);
+
+  // El enlace se agregó después de marcar la página activa: se marca aquí.
+  if (location.pathname.endsWith('exportar.html')) {
+    const a = li.querySelector('a');
+    a.classList.add('active');
+    a.setAttribute('aria-current', 'page');
+  }
+}
+
 /**
  * Aviso de contraseña próxima a caducar. Se muestra en todas las páginas para
  * que nadie se entere el día que ya no puede entrar.
@@ -77,6 +101,13 @@
       window.location.href = '/cambiar-password.html';
       return;
     }
+
+    /*
+     * "Exportar datos" se inyecta solo para las cuentas autorizadas, en vez de
+     * dejarlo en el HTML y ocultarlo: así no aparece un instante antes de que
+     * cargue el JS. De todos modos es cosmético, el permiso lo valida el servidor.
+     */
+    if (me.puedeExportar) agregarEnlaceExportar();
     if (!me.passwordPorCaducar || me.passwordDiasRestantes == null) return;
 
     const dias = me.passwordDiasRestantes;

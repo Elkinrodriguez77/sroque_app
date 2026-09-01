@@ -21,8 +21,10 @@ const {
   getAllOrigenes, getActiveOrigenes, insertOrigen, updateOrigen, toggleOrigenActivo, deleteOrigen,
   getHojaVidaMascota, getResumenMascotasPorTelefono, getResumenMascotasPorNombre,
   getPedidosEliminados,
+  exportarPedidos, exportarPedidosEliminados, contarExportacion,
   pool: dbPool,
 } = require('./db');
+const { generarCsv, generarExcel, nombreArchivo } = require('./exportar');
 
 /** Esquema validado, para el almacén de sesiones. */
 function safeSchema() {
@@ -153,6 +155,9 @@ app.get('/api/me', async (req, res) => {
     username: req.session.username,
     rol: req.session.rol || 'user',
     esOwner: (req.session.rol || 'user') === ROL_OWNER,
+    // Habilita el modulo de exportacion en el menu (el permiso real se valida
+    // en el servidor en cada peticion, esto es solo para la interfaz).
+    puedeExportar: puedeExportar(req),
     mustChangePassword: !!req.session.mustChangePassword,
   };
   // Estado fresco de la contraseña para poder avisar "caduca en N días".
@@ -903,6 +908,95 @@ app.patch('/api/groomers/:id/toggle', async (req, res) => {
   } catch (e) {
     console.error('Toggle groomer error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+// -------- Exportación de datos (acceso restringido) --------
+/**
+ * Solo estas cuentas pueden descargar datos crudos. Se valida por nombre de
+ * usuario y no por rol porque kathe_superadmin tiene rol 'user': el rol define
+ * la caducidad de la contraseña, no este permiso.
+ */
+const USUARIOS_EXPORTACION = ['elkin_owner', 'kathe_superadmin'];
+
+function puedeExportar(req) {
+  const u = req.session && req.session.username;
+  return !!u && USUARIOS_EXPORTACION.includes(u);
+}
+
+/**
+ * El menú se oculta a los demás usuarios, pero eso es solo cosmético: la
+ * autorización real se hace aquí, en cada petición.
+ */
+function requireExportacion(req, res, next) {
+  if (puedeExportar(req)) return next();
+  console.warn(`Acceso denegado a exportación: usuario "${req.session && req.session.username}"`);
+  return res.status(403).json({ ok: false, errors: ['No tienes permiso para exportar datos'] });
+}
+
+/** Valida el rango recibido. Devuelve {desde, hasta} o {error}. */
+function validarRango(req) {
+  const desde = String(req.query.desde || '').trim();
+  const hasta = String(req.query.hasta || '').trim();
+  const formato = /^\d{4}-\d{2}-\d{2}$/;
+  if (!formato.test(desde) || !formato.test(hasta)) {
+    return { error: 'Indica un rango de fechas válido (desde y hasta)' };
+  }
+  if (desde > hasta) return { error: '"Desde" no puede ser mayor que "Hasta"' };
+  return { desde, hasta };
+}
+
+/** ¿Sobre qué fecha se filtran los eliminados? */
+function modoFechaEliminados(req) {
+  return req.query.porFecha === 'servicio' ? 'servicio' : 'eliminacion';
+}
+
+/** Resumen previo: cuántas filas saldrían, para confirmar antes de descargar. */
+app.get('/api/exportar/resumen', requireExportacion, async (req, res) => {
+  try {
+    const { desde, hasta, error } = validarRango(req);
+    if (error) return res.status(400).json({ ok: false, errors: [error] });
+    const data = await contarExportacion(desde, hasta, modoFechaEliminados(req));
+    res.json({ ok: true, data: { ...data, desde, hasta } });
+  } catch (e) {
+    console.error('Resumen exportación error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno'] });
+  }
+});
+
+/** Descarga de un conjunto de datos en CSV o Excel. */
+app.get('/api/exportar/:conjunto', requireExportacion, async (req, res) => {
+  try {
+    const conjunto = req.params.conjunto;
+    if (!['pedidos', 'pedidos-eliminados'].includes(conjunto)) {
+      return res.status(404).json({ ok: false, errors: ['Conjunto de datos no válido'] });
+    }
+    const { desde, hasta, error } = validarRango(req);
+    if (error) return res.status(400).json({ ok: false, errors: [error] });
+
+    const formato = req.query.formato === 'excel' ? 'excel' : 'csv';
+    const filas = conjunto === 'pedidos'
+      ? await exportarPedidos(desde, hasta)
+      : await exportarPedidosEliminados(desde, hasta, modoFechaEliminados(req));
+
+    const base = conjunto === 'pedidos' ? 'pedidos' : 'pedidos_eliminados';
+    const usuario = (req.session && req.session.username) || 'desconocido';
+    console.log(`Exportación: ${usuario} descargó ${filas.length} fila(s) de ${base} (${desde} a ${hasta}, ${formato})`);
+
+    if (formato === 'excel') {
+      const buffer = await generarExcel(filas, base);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo(base, desde, hasta, 'xlsx')}"`);
+      return res.send(buffer);
+    }
+
+    const buffer = generarCsv(filas);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo(base, desde, hasta, 'csv')}"`);
+    res.send(buffer);
+  } catch (e) {
+    console.error('Exportación error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno al generar el archivo'] });
   }
 });
 
