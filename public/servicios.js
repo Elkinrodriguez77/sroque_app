@@ -62,18 +62,36 @@ function addCopyTelBtn(li, telefono) {
   li.appendChild(btn);
 }
 
-/** Agrega una fila de servicio a la tabla (columnas comunes a Sistema y Excel). */
-function appendServicioRow(body, { fecha, servicio, precio, adicionales, precioFinal, groomer }) {
+/**
+ * Texto del medio de pago. En los pagos Mixtos se detallan los dos métodos,
+ * igual que en el dashboard, para no perder el detalle del cobro.
+ */
+function medioPagoTexto(p) {
+  if (!p || !p.metodo_pago) return '-';
+  if (p.metodo_pago === 'Mixto' && p.metodo_pago_1) {
+    return `Mixto: ${p.metodo_pago_1} + ${p.metodo_pago_2 || '?'}`;
+  }
+  return p.metodo_pago;
+}
+
+/**
+ * Agrega una fila de servicio a la tabla.
+ * `raza` y `medioPago` solo llegan del histórico del Sistema; en el de Excel
+ * van vacíos y sus columnas quedan ocultas (ver switchSource).
+ */
+function appendServicioRow(body, { fecha, raza, servicio, precio, adicionales, precioFinal, medioPago, groomer }) {
   const tr = document.createElement('tr');
   const tieneAdic = adicionales != null && adicionales !== '';
   const adicNum = Number(adicionales || 0);
   const adicClass = tieneAdic ? (adicNum < 0 ? 'txt-red' : 'txt-green') : '';
   tr.innerHTML = `
     <td>${fecha}</td>
+    <td class="col-solo-sistema">${esc(raza || '-')}</td>
     <td>${esc(servicio || '-')}</td>
     <td>${money(precio)}</td>
     <td class="${adicClass}">${money(adicionales)}</td>
     <td><strong>${money(precioFinal)}</strong></td>
+    <td class="col-solo-sistema">${esc(medioPago || '-')}</td>
     <td>${esc(groomer || '-')}</td>
   `;
   body.appendChild(tr);
@@ -82,6 +100,9 @@ function appendServicioRow(body, { fecha, servicio, precio, adicionales, precioF
 function switchSource(source) {
   currentSource = source;
   document.querySelectorAll('.dash-mode').forEach(b => b.classList.toggle('active', b.dataset.source === source));
+  // Raza y Medio de pago no existen en el historico de Excel: se ocultan ahi
+  // en vez de mostrar una columna siempre vacia.
+  document.getElementById('serviciosTabla')?.classList.toggle('modo-excel', source !== 'sistema');
   document.getElementById('mascotasList').hidden = true;
   document.getElementById('pedidosList').hidden = true;
   document.getElementById('serviciosMsg').textContent = '';
@@ -188,10 +209,12 @@ async function seleccionarSistema(mascota) {
         : '-';
       appendServicioRow(serviciosBody, {
         fecha: fechaHora,
+        raza: p.raza,
         servicio: p.servicio,
         precio: p.precio,
         adicionales: p.adicionales_descuentos,
         precioFinal: p.precio_final,
+        medioPago: medioPagoTexto(p),
         groomer: p.groomer1,
       });
     });
@@ -279,6 +302,7 @@ async function seleccionarExcel(mascota) {
     }
 
     servicios.forEach((s) => {
+      // El CSV historico no incluye raza ni metodo de pago.
       appendServicioRow(serviciosBody, {
         fecha: formatDateSafe(s.fecha),
         servicio: s.servicio,

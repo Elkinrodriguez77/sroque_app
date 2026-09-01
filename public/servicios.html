@@ -127,14 +127,18 @@
       <fieldset>
         <legend id="pedidosLegend">Servicios realizados</legend>
         <div class="dash-table-wrap">
-          <table class="dash-table">
+          <!-- Raza y Medio de pago solo existen en el histórico del Sistema; el
+               CSV de Excel no los trae, así que se ocultan en ese modo. -->
+          <table class="dash-table" id="serviciosTabla">
             <thead>
               <tr>
                 <th>Fecha</th>
+                <th class="col-solo-sistema">Raza</th>
                 <th>Servicio</th>
                 <th>Precio</th>
                 <th>Adicionales</th>
                 <th>Precio final</th>
+                <th class="col-solo-sistema">Medio de pago</th>
                 <th>Groomer</th>
               </tr>
             </thead>

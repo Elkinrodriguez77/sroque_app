@@ -2854,3 +2854,8 @@ body { max-width: 100%; overflow-x: clip; }
   .alerta-modal-acciones button,
   .alerta-modal-acciones .alerta-btn-ir { width: 100%; }
 }
+
+/* Servicios: Raza y Medio de pago solo existen en el historico del Sistema.
+   En el historico de Excel esos datos no vienen en el CSV, asi que se ocultan
+   las columnas en vez de mostrarlas siempre vacias. */
+.dash-table.modo-excel .col-solo-sistema { display: none; }

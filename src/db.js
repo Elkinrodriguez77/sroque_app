@@ -737,6 +737,7 @@ async function getPedidosPorMascota(mascotaId) {
   if (!mascota) return [];
   const { rows } = await pool.query(
     `SELECT id, fecha_hora, servicio, groomer1, nombre_mascota,
+            raza, metodo_pago, metodo_pago_1, metodo_pago_2,
             precio, adicionales_descuentos,
             (COALESCE(precio,0) + COALESCE(adicionales_descuentos,0)) AS precio_final
      FROM ${schema}.pedidos
