@@ -64,16 +64,16 @@
   });
 })();
 
-/** Agrega "Exportar datos" al menú, justo antes de "Acerca de". */
-function agregarEnlaceExportar() {
+/** Agrega un enlace al menú, justo antes de "Acerca de". */
+function agregarEnlaceMenu(href, etiqueta, icono) {
   const lista = document.querySelector('.sidebar-list');
-  if (!lista || lista.querySelector('a[href="/exportar.html"]')) return;
+  if (!lista || lista.querySelector(`a[href="${href}"]`)) return;
 
   const li = document.createElement('li');
   li.innerHTML = `
-    <a href="/exportar.html" class="sidebar-link">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
-      <span class="sidebar-label">Exportar datos</span>
+    <a href="${href}" class="sidebar-link">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">${icono}</svg>
+      <span class="sidebar-label">${etiqueta}</span>
     </a>`;
 
   const acerca = lista.querySelector('a[href="/acerca.html"]');
@@ -81,12 +81,21 @@ function agregarEnlaceExportar() {
   else lista.appendChild(li);
 
   // El enlace se agregó después de marcar la página activa: se marca aquí.
-  if (location.pathname.endsWith('exportar.html')) {
+  if (location.pathname.endsWith(href.replace(/^\//, ''))) {
     const a = li.querySelector('a');
     a.classList.add('active');
     a.setAttribute('aria-current', 'page');
   }
 }
+
+function agregarEnlaceExportar() {
+  agregarEnlaceMenu('/exportar.html', 'Exportar datos',
+    '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/>');
+}
+
+/* "BD Clientes" es para todos: se agrega apenas carga el menú, sin esperar a /api/me. */
+agregarEnlaceMenu('/bd-clientes.html', 'BD Clientes',
+  '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>');
 
 /**
  * Aviso de contraseña próxima a caducar. Se muestra en todas las páginas para

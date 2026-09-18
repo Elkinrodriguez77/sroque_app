@@ -21,7 +21,7 @@ const {
   getAllOrigenes, getActiveOrigenes, insertOrigen, updateOrigen, toggleOrigenActivo, deleteOrigen,
   getHojaVidaMascota, getResumenMascotasPorTelefono, getResumenMascotasPorNombre,
   getPedidosEliminados,
-  exportarPedidos, exportarPedidosEliminados, contarExportacion,
+  exportarPedidos, exportarPedidosEliminados, contarExportacion, getBdClientesSheets,
   pool: dbPool,
 } = require('./db');
 const { generarCsv, generarExcel, nombreArchivo } = require('./exportar');
@@ -997,6 +997,25 @@ app.get('/api/exportar/:conjunto', requireExportacion, async (req, res) => {
   } catch (e) {
     console.error('Exportación error:', e);
     res.status(500).json({ ok: false, errors: ['Error interno al generar el archivo'] });
+  }
+});
+
+// -------- BD_Clientes para Google Sheets (todos los usuarios) --------
+/**
+ * Devuelve las filas como arreglos (no objetos) para que el JSON pese menos y
+ * el orden de columnas sea el de la hoja. El navegador arma el CSV y el texto
+ * para pegar a partir de esta única respuesta: una sola consulta por carga.
+ */
+app.get('/api/bd-clientes', async (req, res) => {
+  try {
+    const data = await getBdClientesSheets();
+    const usuario = (req.session && req.session.username) || 'desconocido';
+    console.log(`BD_Clientes: ${usuario} consultó ${data.filas.length} fila(s) (corte ${data.fechaCorte})`);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ ok: true, data });
+  } catch (e) {
+    console.error('BD_Clientes error:', e);
+    res.status(500).json({ ok: false, errors: ['Error interno al consultar BD_Clientes'] });
   }
 });
 

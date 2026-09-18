@@ -918,6 +918,95 @@ async function exportarPedidosEliminados(desde, hasta, porFecha = 'eliminacion')
   return rows;
 }
 
+/**
+ * Carga de BD_Clientes (Google Sheets "Seguimiento San Roque"): clientes En
+ * riesgo y Perdidos con las 11 columnas de la hoja, en su orden y con sus
+ * encabezados exactos. La hoja Gestion busca por A y trae B, D, F, G, H, J:
+ * si cambias el orden de este SELECT, se rompen esas fórmulas.
+ *
+ * Frente a la consulta original:
+ *  - Una sola lectura de pedidos. La fecha de corte sale de la misma agregación
+ *    (ventana sobre los grupos) y no de un segundo recorrido; los pedidos sin
+ *    teléfono entran en un grupo NULL que solo aporta al corte y luego se descarta.
+ *  - Los días sin volver se calculan una vez, no en cada CASE/WHERE/ORDER BY.
+ *  - El día se toma en hora de Bogotá, como en el resto de la app; con
+ *    fecha_hora::date un servicio de las 7 p. m. contaba como del día siguiente.
+ *  - precio_final se calcula igual que en la app (precio + adicionales).
+ *  - Mascotas/razas vacías o con espacios no ensucian la lista.
+ */
+async function getBdClientesSheets() {
+  const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
+  const { fields, rows } = await pool.query({
+    rowMode: 'array',
+    text: `
+    WITH agregado AS (
+      SELECT
+        telefono,
+        MIN(fecha)             AS primera_visita,
+        MAX(fecha)             AS ultima_visita,
+        COUNT(DISTINCT fecha)  AS visitas_reales,
+        SUM(precio_final)      AS valor_cliente,
+        STRING_AGG(DISTINCT mascota, ', ' ORDER BY mascota) AS mascotas,
+        STRING_AGG(DISTINCT raza,    ', ' ORDER BY raza)    AS razas,
+        MAX(MAX(fecha)) OVER () AS fecha_corte
+      FROM (
+        SELECT
+          NULLIF(REPLACE(telefono_propietario, '+1 (689) 270-3411', '1689270241'), '') AS telefono,
+          (fecha_hora AT TIME ZONE 'America/Bogota')::date AS fecha,
+          NULLIF(BTRIM(nombre_mascota), '') AS mascota,
+          NULLIF(BTRIM(raza), '')           AS raza,
+          COALESCE(precio, 0) + COALESCE(adicionales_descuentos, 0) AS precio_final
+        FROM ${schema}.pedidos
+        WHERE cerrado = true
+      ) p
+      GROUP BY telefono
+    ),
+    candidatos AS (
+      SELECT a.*, (a.fecha_corte - a.ultima_visita) AS dias
+      FROM agregado a
+      WHERE a.telefono IS NOT NULL
+        AND a.fecha_corte - a.ultima_visita > 60   -- solo En riesgo y Perdidos
+    ),
+    clientes_norm AS (
+      -- Un registro por teléfono (Table.Distinct de Power Query)
+      SELECT DISTINCT ON (tel) tel, nombre_propietario, email
+      FROM (
+        SELECT REPLACE(telefono_propietario, '+1 (689) 270-3411', '1689270241') AS tel,
+               nombre_propietario, email
+        FROM ${schema}.clientes
+        WHERE telefono_propietario IS NOT NULL AND telefono_propietario <> ''
+      ) x
+      ORDER BY tel, nombre_propietario
+    )
+    SELECT
+      k.telefono                                              AS "Telefono",
+      COALESCE(c.nombre_propietario, '(sin ficha de cliente)') AS "Nombre Propietario",
+      COALESCE(c.email, '')                                   AS "Email",
+      k.mascotas                                              AS "Mascotas",
+      k.razas                                                 AS "Razas",
+      to_char(k.ultima_visita, 'YYYY-MM-DD')                  AS "Ultima Visita",
+      k.dias                                                  AS "Dias sin Volver",
+      CASE WHEN k.dias <= 90 THEN 'En riesgo' ELSE 'Perdido' END AS "Estado",
+      k.visitas_reales::int                                   AS "Visitas Reales",
+      ROUND(k.valor_cliente)::bigint                          AS "Valor Cliente",
+      CASE WHEN k.visitas_reales > 1
+           THEN ROUND((k.ultima_visita - k.primera_visita)::numeric / (k.visitas_reales - 1))::int
+      END                                                     AS "Frecuencia Dias",
+      to_char(k.fecha_corte, 'YYYY-MM-DD')                    AS fecha_corte
+    FROM candidatos k
+    LEFT JOIN clientes_norm c ON c.tel = k.telefono
+    ORDER BY (k.dias > 90), k.valor_cliente DESC, k.telefono`,
+  });
+
+  // La fecha de corte viaja en la última columna solo para informarla; no va a la hoja.
+  const fechaCorte = rows.length ? rows[0][rows[0].length - 1] : null;
+  return {
+    columnas: fields.slice(0, -1).map((f) => f.name),
+    filas: rows.map((r) => r.slice(0, -1)),
+    fechaCorte,
+  };
+}
+
 /** Cuántas filas devolvería cada exportación, para avisar antes de descargar. */
 async function contarExportacion(desde, hasta, porFecha = 'eliminacion') {
   const schema = safeSchemaName(process.env.PGSCHEMA || 'prod');
@@ -1153,7 +1242,7 @@ module.exports = {
   getAllOrigenes, getActiveOrigenes, insertOrigen, updateOrigen, toggleOrigenActivo, deleteOrigen,
   getHojaVidaMascota, getResumenMascotasPorTelefono, getResumenMascotasPorNombre,
   getPedidosEliminados,
-  exportarPedidos, exportarPedidosEliminados, contarExportacion,
+  exportarPedidos, exportarPedidosEliminados, contarExportacion, getBdClientesSheets,
 };
 
 
