@@ -81,29 +81,43 @@ function buildPagosTab(rows) {
 }
 
 function buildGroomersTab(rows) {
+  /*
+   * Los servicios se cuentan por pedido, pero las mascotas se listan sin
+   * repetir: si la misma mascota vino tres veces en el rango, el groomer tiene
+   * tres servicios y el nombre aparece una sola vez.
+   */
   const groomers = {};
-  for (const r of rows) {
-    if (r.groomer1) {
-      groomers[r.groomer1] = (groomers[r.groomer1] || 0) + 1;
-    }
-    if (r.groomer2) {
-      groomers[r.groomer2] = (groomers[r.groomer2] || 0) + 1;
-    }
+  function registrar(nombreGroomer, mascota) {
+    if (!nombreGroomer) return;
+    if (!groomers[nombreGroomer]) groomers[nombreGroomer] = { servicios: 0, mascotas: new Set() };
+    groomers[nombreGroomer].servicios += 1;
+    if (mascota) groomers[nombreGroomer].mascotas.add(String(mascota).trim());
   }
+
+  for (const r of rows) {
+    registrar(r.groomer1, r.nombre_mascota);
+    registrar(r.groomer2, r.nombre_mascota);
+  }
+
   const body = document.getElementById('dashGroomersBody');
   const foot = document.getElementById('dashGroomersFoot');
   body.innerHTML = '';
   foot.innerHTML = '';
-  const sorted = Object.entries(groomers).sort((a, b) => b[1] - a[1]);
+  const sorted = Object.entries(groomers).sort((a, b) => b[1].servicios - a[1].servicios);
   let totalServicios = 0;
-  for (const [nombre, count] of sorted) {
-    totalServicios += count;
+  for (const [nombre, datos] of sorted) {
+    totalServicios += datos.servicios;
+    const mascotas = [...datos.mascotas].sort((a, b) => a.localeCompare(b, 'es'));
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${nombre}</td><td>${count}</td>`;
+    // Los nombres van con textContent: pueden traer comillas o signos del formulario.
+    tr.innerHTML = '<td></td><td></td><td class="dash-mascotas"></td>';
+    tr.children[0].textContent = nombre;
+    tr.children[1].textContent = datos.servicios;
+    tr.children[2].textContent = mascotas.join(', ') || '-';
     body.appendChild(tr);
   }
   const trF = document.createElement('tr');
-  trF.innerHTML = `<td><strong>TOTAL</strong></td><td><strong>${totalServicios}</strong></td>`;
+  trF.innerHTML = `<td><strong>TOTAL</strong></td><td><strong>${totalServicios}</strong></td><td></td>`;
   foot.appendChild(trF);
 }
 

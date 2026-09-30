@@ -175,6 +175,8 @@ function validateGasto(gasto) {
   if (!gasto.categoria) errors.push('Categoría es requerida');
   if (gasto.categoria === 'Otros' && !gasto.categoria_otro) errors.push('Especifique la categoría "Otros"');
   if (!gasto.metodo_pago) errors.push('Método de pago es requerido');
+  // Piso es obligatorio desde 2026-09: sin él, el gasto no entra en el cierre por piso.
+  if (!gasto.piso) errors.push('Piso es requerido');
   return errors;
 }
 

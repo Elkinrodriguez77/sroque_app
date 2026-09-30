@@ -710,6 +710,12 @@ button[type="button"]:hover { background: #4b5563; color: #f9fafb; }
   border-top: 2px solid #6366f1; padding: 10px 8px;
   background: rgba(99,102,241,0.06); color: #f9fafb;
 }
+/* La lista de mascotas de cada groomer puede ser larga: se parte en varias
+   lineas en vez de estirar la tabla a lo ancho. */
+.dash-table td.dash-mascotas {
+  white-space: normal; min-width: 260px; line-height: 1.45; color: #cbd5e1;
+}
+
 .txt-red { color: #f87171; }
 .txt-green { color: #34d399; }
 .dash-actions-col { width: 1%; text-align: center; }
